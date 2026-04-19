@@ -1,0 +1,4 @@
+2026-04-19T13:26:04: ◇ injected env (5) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+2026-04-19T13:26:04: 🚀 Proxy running on port 1500
+2026-04-19T13:26:04: 📡 Forwarding to 127.0.0.1:1600
+2026-04-19T13:26:04: ✅ Connected to PostgreSQL
