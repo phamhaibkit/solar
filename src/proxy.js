@@ -44,12 +44,20 @@ async function logRawData(data, source, clientAddress) {
   const timestamp = new Date();
   const hexData = data.toString('hex').toUpperCase();
   
+  // Parse function code from frame structure
+  // Based on actual data analysis: function code is at position 7 (0-indexed)
+  let functionCode = null;
+  if (data.length >= 8) {
+    const cmdByte = data[7];
+    functionCode = '0x' + cmdByte.toString(16).toUpperCase().padStart(2, '0');
+  }
+  
   try {
     await pool.query(
-      'INSERT INTO raw_data (timestamp, source, client_address, data_length, hex_data) VALUES ($1, $2, $3, $4, $5)',
-      [timestamp, source, clientAddress, data.length, hexData]
+      'INSERT INTO raw_data (timestamp, source, client_address, data_length, function_code, hex_data) VALUES ($1, $2, $3, $4, $5, $6)',
+      [timestamp, source, clientAddress, data.length, functionCode, hexData]
     );
-    console.log(`📝 Logged raw data from ${source}: ${data.length} bytes`);
+    console.log(`📝 Logged raw data from ${source}: ${data.length} bytes [${functionCode || 'N/A'}]`);
   } catch (err) {
     console.error('❌ Error saving to PostgreSQL:', err.message);
   }
