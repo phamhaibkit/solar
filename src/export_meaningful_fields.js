@@ -16,12 +16,13 @@ const OFFICIAL_REGISTER_MAP = {
     pv2Current: { address: 4, name: 'PV2 Current', unit: 'A', scale: 0.1 },
     pv2Power: { address: 5, name: 'PV2 Power', unit: 'kW', scale: 0.1 },
     
-    // Battery - Address 16-18, 24, 26
+    // Battery - Address 16-18, 24, 26, 47
     batteryVoltage: { address: 16, name: 'Battery Voltage', unit: 'V', scale: 0.1 },
     batteryPower: { address: 17, name: 'Battery Power', unit: 'kW', scale: 0.1, signed: true },
     soc: { address: 18, name: 'SOC', unit: '%', scale: 1 },
     batteryDailyDischargeCapacity: { address: 24, name: 'Battery Daily Discharge Capacity', unit: 'kWh', scale: 0.1 },
     batteryDailyChargeCapacity: { address: 26, name: 'Battery Daily Charge Capacity', unit: 'kWh', scale: 0.1 },
+    batteryPercentage: { address: 47, name: 'Battery Percentage', unit: '%', scale: 1 },
     
     // Grid - Address 34-36, 43
     gridVoltageL1: { address: 34, name: 'Grid Voltage L1 (U)', unit: 'V', scale: 0.1 },
@@ -48,6 +49,18 @@ const OFFICIAL_REGISTER_MAP = {
     gridExportDaily: { address: 94, name: 'Grid Export (Daily)', unit: 'kWh', scale: 0.1 },
     genEnergyDaily: { address: 222, name: 'GEN Energy (Daily)', unit: 'kWh', scale: 0.1 },
     
+    // Energy - Total (High/Low bits)
+    pvTotalLow: { address: 64, name: 'PV Total (Low)', unit: 'kWh', scale: 0.1 },
+    pvTotalHigh: { address: 65, name: 'PV Total (High)', unit: 'kWh', scale: 0.1 },
+    loadTotalLow: { address: 84, name: 'Load Total (Low)', unit: 'kWh', scale: 0.1 },
+    loadTotalHigh: { address: 85, name: 'Load Total (High)', unit: 'kWh', scale: 0.1 },
+    gridImportTotalLow: { address: 90, name: 'Grid Import Total (Low)', unit: 'kWh', scale: 0.1 },
+    gridImportTotalHigh: { address: 91, name: 'Grid Import Total (High)', unit: 'kWh', scale: 0.1 },
+    gridExportTotalLow: { address: 96, name: 'Grid Export Total (Low)', unit: 'kWh', scale: 0.1 },
+    gridExportTotalHigh: { address: 97, name: 'Grid Export Total (High)', unit: 'kWh', scale: 0.1 },
+    genTotalLow: { address: 224, name: 'GEN Total (Low)', unit: 'kWh', scale: 0.1 },
+    genTotalHigh: { address: 225, name: 'GEN Total (High)', unit: 'kWh', scale: 0.1 },
+    
     // Energy - Address 243-245
     dailyEnergyFromMeter: { address: 243, name: 'Daily Energy From Meter', unit: 'kWh', scale: 0.1, offset: 1 },
     totalEnergyFromMeterLow: { address: 244, name: 'Total Energy From Meter (Low)', unit: 'kWh', scale: 0.1 },
@@ -60,6 +73,12 @@ function applyScale(value, scale = 1, offset = 0, signed = false) {
     result = result * scale;
     if (offset) result += offset;
     return result;
+}
+
+// Helper function to calculate High/Low bit value
+function calculateHighLow(low, high, scale = 1) {
+    const total = (low * 65536) + high;
+    return total * scale;
 }
 
 // Main function to extract meaningful fields from parsed data (Simplified for Web Server display)
@@ -78,30 +97,65 @@ function extractMeaningfulFields(parsedData) {
             deviceSN: parsedData.deviceSN,
         },
         pv: {
-            generatedEnergy: applyScale(registerMap[OFFICIAL_REGISTER_MAP.pvGeneratedDaily.address], OFFICIAL_REGISTER_MAP.pvGeneratedDaily.scale),
-            unit: OFFICIAL_REGISTER_MAP.pvGeneratedDaily.unit,
+            daily: applyScale(registerMap[OFFICIAL_REGISTER_MAP.pvGeneratedDaily.address], OFFICIAL_REGISTER_MAP.pvGeneratedDaily.scale),
+            total: calculateHighLow(
+                registerMap[OFFICIAL_REGISTER_MAP.pvTotalLow.address],
+                registerMap[OFFICIAL_REGISTER_MAP.pvTotalHigh.address],
+                OFFICIAL_REGISTER_MAP.pvTotalLow.scale
+            ) / 1000,
+            dailyUnit: 'kWh',
+            totalUnit: 'MWh',
             label: "Generated energy of PV"
         },
         load: {
-            consumption: applyScale(registerMap[OFFICIAL_REGISTER_MAP.loadConsumptionDaily.address], OFFICIAL_REGISTER_MAP.loadConsumptionDaily.scale),
-            unit: OFFICIAL_REGISTER_MAP.loadConsumptionDaily.unit,
+            daily: applyScale(registerMap[OFFICIAL_REGISTER_MAP.loadConsumptionDaily.address], OFFICIAL_REGISTER_MAP.loadConsumptionDaily.scale),
+            total: calculateHighLow(
+                registerMap[OFFICIAL_REGISTER_MAP.loadTotalLow.address],
+                registerMap[OFFICIAL_REGISTER_MAP.loadTotalHigh.address],
+                OFFICIAL_REGISTER_MAP.loadTotalLow.scale
+            ),
+            dailyUnit: 'kWh',
+            totalUnit: 'kWh',
             label: "Consumption of load"
         },
         battery: {
+            percentage: applyScale(registerMap[OFFICIAL_REGISTER_MAP.batteryPercentage.address], OFFICIAL_REGISTER_MAP.batteryPercentage.scale),
+            power: applyScale(registerMap[OFFICIAL_REGISTER_MAP.batteryPower.address], OFFICIAL_REGISTER_MAP.batteryPower.scale, 0, OFFICIAL_REGISTER_MAP.batteryPower.signed),
             charge: applyScale(registerMap[OFFICIAL_REGISTER_MAP.batteryDailyChargeCapacity.address], OFFICIAL_REGISTER_MAP.batteryDailyChargeCapacity.scale),
             discharge: applyScale(registerMap[OFFICIAL_REGISTER_MAP.batteryDailyDischargeCapacity.address], OFFICIAL_REGISTER_MAP.batteryDailyDischargeCapacity.scale),
             unit: OFFICIAL_REGISTER_MAP.batteryDailyChargeCapacity.unit,
             label: "Battery charge/discharge"
         },
         grid: {
-            import: applyScale(registerMap[OFFICIAL_REGISTER_MAP.gridImportDaily.address], OFFICIAL_REGISTER_MAP.gridImportDaily.scale),
-            export: applyScale(registerMap[OFFICIAL_REGISTER_MAP.gridExportDaily.address], OFFICIAL_REGISTER_MAP.gridExportDaily.scale),
-            unit: OFFICIAL_REGISTER_MAP.gridImportDaily.unit,
+            import: {
+                daily: applyScale(registerMap[OFFICIAL_REGISTER_MAP.gridImportDaily.address], OFFICIAL_REGISTER_MAP.gridImportDaily.scale),
+                total: calculateHighLow(
+                    registerMap[OFFICIAL_REGISTER_MAP.gridImportTotalLow.address],
+                    registerMap[OFFICIAL_REGISTER_MAP.gridImportTotalHigh.address],
+                    OFFICIAL_REGISTER_MAP.gridImportTotalLow.scale
+                ) / 1000
+            },
+            export: {
+                daily: applyScale(registerMap[OFFICIAL_REGISTER_MAP.gridExportDaily.address], OFFICIAL_REGISTER_MAP.gridExportDaily.scale),
+                total: calculateHighLow(
+                    registerMap[OFFICIAL_REGISTER_MAP.gridExportTotalLow.address],
+                    registerMap[OFFICIAL_REGISTER_MAP.gridExportTotalHigh.address],
+                    OFFICIAL_REGISTER_MAP.gridExportTotalLow.scale
+                ) / 1000
+            },
+            dailyUnit: 'kWh',
+            totalUnit: 'MWh',
             label: "Import from grid / Export to grid"
         },
         gen: {
-            energy: applyScale(registerMap[OFFICIAL_REGISTER_MAP.genEnergyDaily.address], OFFICIAL_REGISTER_MAP.genEnergyDaily.scale),
-            unit: OFFICIAL_REGISTER_MAP.genEnergyDaily.unit,
+            daily: applyScale(registerMap[OFFICIAL_REGISTER_MAP.genEnergyDaily.address], OFFICIAL_REGISTER_MAP.genEnergyDaily.scale),
+            total: calculateHighLow(
+                registerMap[OFFICIAL_REGISTER_MAP.genTotalLow.address],
+                registerMap[OFFICIAL_REGISTER_MAP.genTotalHigh.address],
+                OFFICIAL_REGISTER_MAP.genTotalLow.scale
+            ) / 1000,
+            dailyUnit: 'kWh',
+            totalUnit: 'MWh',
             label: "GEN Energy"
         }
     };
