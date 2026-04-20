@@ -6,7 +6,63 @@ const toSigned16 = (value) => {
     return value;
 };
 
-// Main function to extract meaningful fields from parsed data
+// Official Register Map from ATESS Protocol
+const OFFICIAL_REGISTER_MAP = {
+    // PV (Photovoltaic) - Address 0-5
+    pv1: { address: 0, name: 'PV1 Voltage', unit: 'V', scale: 0.1 },
+    pv1Current: { address: 1, name: 'PV1 Current', unit: 'A', scale: 0.1 },
+    pv1Power: { address: 2, name: 'PV1 Power', unit: 'kW', scale: 0.1 },
+    pv2: { address: 3, name: 'PV2 Voltage', unit: 'V', scale: 0.1 },
+    pv2Current: { address: 4, name: 'PV2 Current', unit: 'A', scale: 0.1 },
+    pv2Power: { address: 5, name: 'PV2 Power', unit: 'kW', scale: 0.1 },
+    
+    // Battery - Address 16-18, 24, 26
+    batteryVoltage: { address: 16, name: 'Battery Voltage', unit: 'V', scale: 0.1 },
+    batteryPower: { address: 17, name: 'Battery Power', unit: 'kW', scale: 0.1, signed: true },
+    soc: { address: 18, name: 'SOC', unit: '%', scale: 1 },
+    batteryDailyDischargeCapacity: { address: 24, name: 'Battery Daily Discharge Capacity', unit: 'kWh', scale: 0.1 },
+    batteryDailyChargeCapacity: { address: 26, name: 'Battery Daily Charge Capacity', unit: 'kWh', scale: 0.1 },
+    
+    // Grid - Address 34-36, 43
+    gridVoltageL1: { address: 34, name: 'Grid Voltage L1 (U)', unit: 'V', scale: 0.1 },
+    gridVoltageL2: { address: 35, name: 'Grid Voltage L2 (V)', unit: 'V', scale: 0.1 },
+    gridVoltageL3: { address: 36, name: 'Grid Voltage L3 (W)', unit: 'V', scale: 0.1 },
+    gridTotalPower: { address: 43, name: 'Grid Total Power', unit: 'kW', scale: 0.1 },
+    
+    // Load - Address 49 (Register 50 in some scanning software)
+    loadTotalPower: { address: 49, name: 'Load Total Power', unit: 'kW', scale: 0.1 },
+    
+    // System - Address 192
+    operationMode: { address: 192, name: 'Operation Mode', unit: '', scale: 1 },
+    
+    // Diesel Generator (DG) - Address 216-220
+    dgCurrentU: { address: 216, name: 'DG Current U', unit: 'A', scale: 0.1, offset: 1 },
+    dgCurrentV: { address: 217, name: 'DG Current V', unit: 'A', scale: 0.1, offset: 1 },
+    dgCurrentW: { address: 218, name: 'DG Current W', unit: 'A', scale: 0.1, offset: 1 },
+    dgActivePower: { address: 220, name: 'DG Active Power', unit: 'kW', scale: 0.1, offset: 1 },
+    
+    // Energy - Daily
+    pvGeneratedDaily: { address: 62, name: 'PV Generated (Daily)', unit: 'kWh', scale: 0.1 },
+    loadConsumptionDaily: { address: 82, name: 'Load Consumption (Daily)', unit: 'kWh', scale: 0.1 },
+    gridImportDaily: { address: 88, name: 'Grid Import (Daily)', unit: 'kWh', scale: 0.1 },
+    gridExportDaily: { address: 94, name: 'Grid Export (Daily)', unit: 'kWh', scale: 0.1 },
+    genEnergyDaily: { address: 222, name: 'GEN Energy (Daily)', unit: 'kWh', scale: 0.1 },
+    
+    // Energy - Address 243-245
+    dailyEnergyFromMeter: { address: 243, name: 'Daily Energy From Meter', unit: 'kWh', scale: 0.1, offset: 1 },
+    totalEnergyFromMeterLow: { address: 244, name: 'Total Energy From Meter (Low)', unit: 'kWh', scale: 0.1 },
+    totalEnergyFromMeterHigh: { address: 245, name: 'Total Energy From Meter (High)', unit: 'kWh', scale: 0.1 }
+};
+
+// Helper function to apply scaling and offset
+function applyScale(value, scale = 1, offset = 0, signed = false) {
+    let result = signed ? toSigned16(value) : value;
+    result = result * scale;
+    if (offset) result += offset;
+    return result;
+}
+
+// Main function to extract meaningful fields from parsed data (Simplified for Web Server display)
 function extractMeaningfulFields(parsedData) {
     const registerMap = parsedData.registerMap;
     const timestampObj = JSON.parse(parsedData.timestamp);
@@ -14,136 +70,41 @@ function extractMeaningfulFields(parsedData) {
     // Format timestamp
     const timestamp = `${timestampObj.year}-${String(timestampObj.month).padStart(2, '0')}-${String(timestampObj.day).padStart(2, '0')}T${String(timestampObj.hour).padStart(2, '0')}:${String(timestampObj.minute).padStart(2, '0')}:${String(timestampObj.second).padStart(2, '0')}`;
     
-    // Extract meaningful fields
+    // Extract simplified fields matching Web Server display
     const meaningfulData = {
         timestamp: timestamp,
         device: {
             loggerSN: parsedData.loggerSN,
             deviceSN: parsedData.deviceSN,
         },
-        system: {
-            statusFlag: registerMap[0],
-            operatingMode: registerMap[52],
-            systemStatus: registerMap[53],
-            faultCode: registerMap[54],
-            warningCode: registerMap[55],
-            mainOperatingMode: registerMap[549],
-            modeDescription: registerMap[549] > 20000 ? "CHARGE" : "DISCHARGE",
-            hasFault: registerMap[54] !== 0,
-            hasWarning: registerMap[55] !== 0
-        },
-        grid: {
-            voltageL1: registerMap[4] / 10,
-            voltageL2: registerMap[5] / 10,
-            voltageL3: registerMap[6] / 10,
-            voltageAverage: (registerMap[4] + registerMap[5] + registerMap[6]) / 30,
-            frequency: registerMap[69] / 1000,
-            powerFactor: registerMap[68] / 1000,
-            exportPower: registerMap[71],
-            importPower: toSigned16(registerMap[70])
-        },
-        battery: {
-            voltage: registerMap[46],
-            current: toSigned16(registerMap[47]),
-            soc: registerMap[48],
-            temperature: toSigned16(registerMap[49]),
-            health: registerMap[50],
-            cycles: registerMap[51],
-            power: toSigned16(registerMap[81]),
-            chargePower: registerMap[83],
-            dischargePower: registerMap[84],
-            efficiency: registerMap[82],
-            isCharging: registerMap[47] > 0,
-            lowSOC: registerMap[48] < 20,
-            poorHealth: registerMap[50] < 50
-        },
-        solar: {
-            powerL1: registerMap[25],
-            powerL2: registerMap[26],
-            powerL3: registerMap[27],
-            totalPower: (registerMap[25] || 0) + (registerMap[26] || 0) + (registerMap[27] || 0)
+        pv: {
+            generatedEnergy: applyScale(registerMap[OFFICIAL_REGISTER_MAP.pvGeneratedDaily.address], OFFICIAL_REGISTER_MAP.pvGeneratedDaily.scale),
+            unit: OFFICIAL_REGISTER_MAP.pvGeneratedDaily.unit,
+            label: "Generated energy of PV"
         },
         load: {
-            powerL1: registerMap[30],
-            powerL2: registerMap[31],
-            powerL3: registerMap[32],
-            totalPower: (registerMap[30] || 0) + (registerMap[31] || 0) + (registerMap[32] || 0)
+            consumption: applyScale(registerMap[OFFICIAL_REGISTER_MAP.loadConsumptionDaily.address], OFFICIAL_REGISTER_MAP.loadConsumptionDaily.scale),
+            unit: OFFICIAL_REGISTER_MAP.loadConsumptionDaily.unit,
+            label: "Consumption of load"
         },
-        inverter: {
-            frequency: registerMap[85] / 10,
-            power: registerMap[87],
-            voltage: registerMap[88],
-            current: registerMap[89],
-            status: registerMap[86]
+        battery: {
+            charge: applyScale(registerMap[OFFICIAL_REGISTER_MAP.batteryDailyChargeCapacity.address], OFFICIAL_REGISTER_MAP.batteryDailyChargeCapacity.scale),
+            discharge: applyScale(registerMap[OFFICIAL_REGISTER_MAP.batteryDailyDischargeCapacity.address], OFFICIAL_REGISTER_MAP.batteryDailyDischargeCapacity.scale),
+            unit: OFFICIAL_REGISTER_MAP.batteryDailyChargeCapacity.unit,
+            label: "Battery charge/discharge"
         },
-        energy: {
-            imported: registerMap[56],
-            exported: registerMap[57],
-            consumed: registerMap[58],
-            generated: registerMap[59],
-            importedToday: registerMap[541] / 100,
-            exportedToday: registerMap[542] / 100,
-            consumedToday: registerMap[543] / 100,
-            generatedToday: registerMap[544] / 100
+        grid: {
+            import: applyScale(registerMap[OFFICIAL_REGISTER_MAP.gridImportDaily.address], OFFICIAL_REGISTER_MAP.gridImportDaily.scale),
+            export: applyScale(registerMap[OFFICIAL_REGISTER_MAP.gridExportDaily.address], OFFICIAL_REGISTER_MAP.gridExportDaily.scale),
+            unit: OFFICIAL_REGISTER_MAP.gridImportDaily.unit,
+            label: "Import from grid / Export to grid"
         },
-        stateVectors: {
-            phase1: registerMap[537],
-            phase2: registerMap[538],
-            phase3: registerMap[539],
-            total: registerMap[537] + registerMap[538] + registerMap[539]
-        },
-        temperature: {
-            sensor1: registerMap[7],
-            sensor2: registerMap[8],
-            sensor3: registerMap[9],
-            sensor4: registerMap[10],
-            sensor5: registerMap[11],
-            sensor6: registerMap[12]
-        },
-        batteryCells: {}
-    };
-    
-    // Extract battery cell voltages
-    for (let i = 630; i <= 640; i++) {
-        if (registerMap[i] !== undefined) {
-            meaningfulData.batteryCells[`cell${i - 629}`] = registerMap[i] / 1000;
+        gen: {
+            energy: applyScale(registerMap[OFFICIAL_REGISTER_MAP.genEnergyDaily.address], OFFICIAL_REGISTER_MAP.genEnergyDaily.scale),
+            unit: OFFICIAL_REGISTER_MAP.genEnergyDaily.unit,
+            label: "GEN Energy"
         }
-    }
-    
-    // Power balance analysis
-    meaningfulData.powerBalance = {
-        solarProduction: meaningfulData.solar.totalPower,
-        loadConsumption: meaningfulData.load.totalPower,
-        netPower: meaningfulData.solar.totalPower - meaningfulData.load.totalPower,
-        gridExport: meaningfulData.grid.exportPower,
-        batteryCharging: meaningfulData.battery.chargePower,
-        description: meaningfulData.solar.totalPower > meaningfulData.load.totalPower ? 
-                     "Excess power exported to grid and battery" : 
-                     "Deficit power imported from grid"
     };
-    
-    // System health summary
-    meaningfulData.healthSummary = {
-        overallStatus: meaningfulData.system.hasFault ? "FAULT" : 
-                      (meaningfulData.system.hasWarning ? "WARNING" : "NORMAL"),
-        issues: []
-    };
-    
-    if (meaningfulData.system.faultCode !== 0) {
-        meaningfulData.healthSummary.issues.push(`Fault Code ${meaningfulData.system.faultCode}`);
-    }
-    if (meaningfulData.system.warningCode !== 0) {
-        meaningfulData.healthSummary.issues.push(`Warning Code ${meaningfulData.system.warningCode}`);
-    }
-    if (meaningfulData.battery.lowSOC) {
-        meaningfulData.healthSummary.issues.push(`Low Battery SOC: ${meaningfulData.battery.soc}%`);
-    }
-    if (meaningfulData.battery.poorHealth) {
-        meaningfulData.healthSummary.issues.push(`Poor Battery Health: ${meaningfulData.battery.health}%`);
-    }
-    if (meaningfulData.battery.temperature === 0) {
-        meaningfulData.healthSummary.issues.push("Battery temperature sensor error");
-    }
     
     return meaningfulData;
 }
