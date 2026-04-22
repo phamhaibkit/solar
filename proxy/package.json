@@ -1,0 +1,16 @@
+{
+  "name": "atess-proxy",
+  "version": "1.0.0",
+  "description": "ATESS Proxy Server for parsing and forwarding data",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js",
+    "dev": "node proxy.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0"
+  },
+  "keywords": ["atess", "proxy", "modbus"],
+  "author": "",
+  "license": "ISC"
+}
