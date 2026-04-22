@@ -64,6 +64,7 @@ async function initDatabase() {
         load_total REAL,
         battery_charge REAL,
         battery_discharge REAL,
+        battery_soc REAL,
         grid_import_daily REAL,
         grid_import_total REAL,
         grid_export_daily REAL,
@@ -124,11 +125,11 @@ async function saveToDatabase(data) {
         time, logger_sn, device_sn,
         pv_daily, pv_total,
         load_daily, load_total,
-        battery_charge, battery_discharge,
+        battery_charge, battery_discharge, battery_soc,
         grid_import_daily, grid_import_total,
         grid_export_daily, grid_export_total,
         gen_daily, gen_total
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     `;
 
     const values = [
@@ -141,6 +142,7 @@ async function saveToDatabase(data) {
       data.load?.total || 0,
       data.battery?.charge || 0,
       data.battery?.discharge || 0,
+      data.battery?.soc || 0,
       data.grid?.import?.daily || 0,
       data.grid?.import?.total || 0,
       data.grid?.export?.daily || 0,
@@ -193,6 +195,7 @@ async function getLatestData() {
       battery: {
         charge: row.battery_charge || 0,
         discharge: row.battery_discharge || 0,
+        soc: row.battery_soc || 0,
         unit: 'kWh',
         label: 'Battery charge/discharge'
       },
@@ -257,6 +260,7 @@ async function getHistoryData(hours = 24) {
       battery: {
         charge: row.battery_charge || 0,
         discharge: row.battery_discharge || 0,
+        soc: row.battery_soc || 0,
         unit: 'kWh',
         label: 'Battery charge/discharge'
       },

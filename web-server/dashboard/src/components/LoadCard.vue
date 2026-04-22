@@ -4,8 +4,7 @@
       <span class="card-icon">🔌</span>
       <span class="card-title">Load Consumption</span>
     </div>
-    <div class="card-value">{{ formatNumber(data.load?.daily) }}<span class="card-unit">kWh</span></div>
-    <div class="card-subvalue">Total: {{ formatNumber(data.load?.total) }}<span class="card-unit">kWh</span></div>
+    <div class="card-value">{{ formatNumber(dashboard.data.load?.daily) }}<span class="card-unit">kWh</span></div>
     <div class="card-label">Consumption of load</div>
   </div>
 </template>
@@ -14,14 +13,14 @@
 import { useDashboardStore } from '../stores/dashboard';
 
 const dashboard = useDashboardStore();
-const { data, formatNumber } = dashboard;
+const { formatNumber } = dashboard;
 </script>
 
 <style scoped>
 .card {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 15px;
-  padding: 25px;
+  padding: 15px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
 }
@@ -33,25 +32,25 @@ const { data, formatNumber } = dashboard;
 .card-header {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .card-icon {
-  font-size: 24px;
-  margin-right: 10px;
+  font-size: 18px;
+  margin-right: 8px;
 }
 
 .card-title {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   color: #333;
 }
 
 .card-value {
-  font-size: 36px;
+  font-size: 24px;
   font-weight: 700;
   color: #667eea;
-  margin: 10px 0;
+  margin: 8px 0;
 }
 
 .card-subvalue {
@@ -61,15 +60,15 @@ const { data, formatNumber } = dashboard;
 }
 
 .card-unit {
-  font-size: 16px;
+  font-size: 12px;
   color: #999;
-  margin-left: 5px;
+  margin-left: 4px;
 }
 
 .card-label {
-  font-size: 12px;
+  font-size: 10px;
   color: #999;
-  margin-top: 10px;
+  margin-top: 8px;
   font-style: italic;
 }
 </style>

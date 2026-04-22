@@ -118,8 +118,14 @@ app.post('/api/data', async (req, res) => {
 });
 
 // API endpoint to get latest data
-app.get('/api/data', (req, res) => {
-  res.json(latestData);
+app.get('/api/data', async (req, res) => {
+  try {
+    const data = await getLatestData();
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Error fetching latest data:', error);
+    res.json(latestData); // Fallback to memory if database fails
+  }
 });
 
 // API endpoint to get historical data from TimescaleDB

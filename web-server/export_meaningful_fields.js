@@ -19,10 +19,10 @@ const OFFICIAL_REGISTER_MAP = {
     // Battery - Address 16-18, 24, 26, 47
     batteryVoltage: { address: 16, name: 'Battery Voltage', unit: 'V', scale: 0.1 },
     batteryPower: { address: 17, name: 'Battery Power', unit: 'kW', scale: 0.1, signed: true },
-    soc: { address: 18, name: 'SOC', unit: '%', scale: 1 },
+    soc: { address: 47, name: 'SOC', unit: '%', scale: 1 },
     batteryDailyDischargeCapacity: { address: 24, name: 'Battery Daily Discharge Capacity', unit: 'kWh', scale: 0.1 },
     batteryDailyChargeCapacity: { address: 26, name: 'Battery Daily Charge Capacity', unit: 'kWh', scale: 0.1 },
-    batteryPercentage: { address: 47, name: 'Battery Percentage', unit: '%', scale: 1 },
+    batteryPercentage: { address: 18, name: 'Battery Percentage', unit: '%', scale: 1 },
     
     // Grid - Address 34-36, 43
     gridVoltageL1: { address: 34, name: 'Grid Voltage L1 (U)', unit: 'V', scale: 0.1 },
@@ -106,6 +106,7 @@ function extractMeaningfulFields(parsedData) {
         battery: {
             charge: applyScale(registerMap[OFFICIAL_REGISTER_MAP.batteryDailyChargeCapacity.address], OFFICIAL_REGISTER_MAP.batteryDailyChargeCapacity.scale),
             discharge: applyScale(registerMap[OFFICIAL_REGISTER_MAP.batteryDailyDischargeCapacity.address], OFFICIAL_REGISTER_MAP.batteryDailyDischargeCapacity.scale),
+            soc: applyScale(registerMap[OFFICIAL_REGISTER_MAP.soc.address], OFFICIAL_REGISTER_MAP.soc.scale),
             unit: OFFICIAL_REGISTER_MAP.batteryDailyChargeCapacity.unit,
             label: "Battery charge/discharge"
         },
