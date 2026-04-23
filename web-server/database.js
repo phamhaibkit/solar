@@ -24,7 +24,7 @@ async function initDatabase() {
 
     // Raw data table
     await pool.query(`
-      CREATE TABLE raw_data (
+      CREATE TABLE IF NOT EXISTS raw_data (
         id SERIAL PRIMARY KEY,
         function_code TEXT,
         source TEXT NOT NULL,
@@ -34,13 +34,11 @@ async function initDatabase() {
       );
     `);
 
-    // Try to create hypertable (ignore if already exists)
+    // Create index for performance
     try {
-      await pool.query(`SELECT create_hypertable('raw_data', 'timestamp')`);
-    } catch (hypertableError) {
-      if (!hypertableError.message.includes('already a hypertable')) {
-        console.warn('⚠️  Could not create hypertable for raw_data:', hypertableError.message);
-      }
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_raw_data_timestamp ON raw_data(timestamp)`);
+    } catch (indexError) {
+      console.warn('⚠️  Could not create index for raw_data:', indexError.message);
     }
 
     // Drop and recreate atess_data table to ensure correct schema
@@ -53,7 +51,7 @@ async function initDatabase() {
 
     // Parsed data table
     await pool.query(`
-      CREATE TABLE atess_data (
+      CREATE TABLE IF NOT EXISTS atess_data (
         time TIMESTAMPTZ NOT NULL,
         logger_sn TEXT,
         device_sn TEXT,
@@ -73,13 +71,11 @@ async function initDatabase() {
       );
     `);
 
-    // Try to create hypertable (ignore if already exists)
+    // Create index for performance
     try {
-      await pool.query(`SELECT create_hypertable('atess_data', 'time')`);
-    } catch (hypertableError) {
-      if (!hypertableError.message.includes('already a hypertable')) {
-        console.warn('⚠️  Could not create hypertable for atess_data:', hypertableError.message);
-      }
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_atess_data_time ON atess_data(time)`);
+    } catch (indexError) {
+      console.warn('⚠️  Could not create index for atess_data:', indexError.message);
     }
 
     console.log('✅ Database initialized successfully');
