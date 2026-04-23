@@ -11,17 +11,9 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-// Initialize TimescaleDB tables
+// Initialize PostgreSQL tables
 async function initDatabase() {
   try {
-    // Drop and recreate raw_data table to add function_code column
-    try {
-      await pool.query(`DROP TABLE IF EXISTS raw_data CASCADE`);
-      console.log('🗑️  Dropped old raw_data table');
-    } catch (dropError) {
-      console.warn('⚠️  Could not drop raw_data:', dropError.message);
-    }
-
     // Raw data table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS raw_data (
@@ -39,14 +31,6 @@ async function initDatabase() {
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_raw_data_timestamp ON raw_data(timestamp)`);
     } catch (indexError) {
       console.warn('⚠️  Could not create index for raw_data:', indexError.message);
-    }
-
-    // Drop and recreate atess_data table to ensure correct schema
-    try {
-      await pool.query(`DROP TABLE IF EXISTS atess_data CASCADE`);
-      console.log('🗑️  Dropped old atess_data table');
-    } catch (dropError) {
-      console.warn('⚠️  Could not drop atess_data:', dropError.message);
     }
 
     // Parsed data table
