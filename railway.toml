@@ -8,3 +8,7 @@ healthcheckPath = "/"
 [env]
 PORT = "3001"
 NODE_ENV = "production"
+
+[postgres]
+name = "atess-db"
+
