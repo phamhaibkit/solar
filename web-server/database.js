@@ -1,8 +1,18 @@
 const { Pool } = require('pg');
 
 // PostgreSQL Connection
-// Use DATABASE_URL for Railway, fallback to localhost for development
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:12345678x@X@localhost:5432/postgres';
+// Use DATABASE_URL for Railway, fallback to individual PG* env vars, then localhost for development
+console.log('🔍 DATABASE_URL:', process.env.DATABASE_URL);
+console.log('🔍 PGHOST:', process.env.PGHOST);
+console.log('🔍 PGPORT:', process.env.PGPORT);
+console.log('🔍 PGUSER:', process.env.PGUSER);
+console.log('🔍 PGDATABASE:', process.env.PGDATABASE);
+
+const fallbackConnectionString = process.env.PGHOST
+  ? `postgresql://${process.env.PGUSER}:${process.env.PGPASSWORD}@${process.env.PGHOST}:${process.env.PGPORT || 5432}/${process.env.PGDATABASE}`
+  : 'postgresql://postgres:postgres@localhost:5432/postgres';
+
+const connectionString = process.env.DATABASE_URL || fallbackConnectionString;
 
 const pool = new Pool({
   connectionString,
