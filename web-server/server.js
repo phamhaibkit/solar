@@ -25,6 +25,9 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 const TCP_DATA_PORT = 3002; // Single port for both collector and web server data
 
+console.log(`🔍 HTTP PORT: ${PORT}`);
+console.log(`🔍 TCP DATA PORT: ${TCP_DATA_PORT}`);
+
 // WebSocket Server
 const wss = new WebSocket.Server({ server });
 
