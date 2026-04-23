@@ -1,12 +1,11 @@
 const { Pool } = require('pg');
 
-// PostgreSQL/TimescaleDB Connection
+// PostgreSQL Connection
+// Use DATABASE_URL for Railway, fallback to localhost for development
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:12345678x@X@localhost:5432/postgres';
+
 const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres',
-  password: '12345678x@X',
+  connectionString,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

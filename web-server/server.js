@@ -4,6 +4,7 @@ const http = require('http');
 const net = require('net');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const path = require('path');
 
 // Import parser functions from proxy folder
 const { parsePacket } = require('./parser');
@@ -21,7 +22,7 @@ const {
 
 const app = express();
 const server = http.createServer(app);
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const TCP_COLLECTOR_PORT = 3002; // Port for collector data
 const TCP_WEB_PORT = 3003; // Port for web server data
 

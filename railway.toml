@@ -1,0 +1,10 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "node web-server/server.js"
+healthcheckPath = "/"
+
+[env]
+PORT = "3001"
+NODE_ENV = "production"
