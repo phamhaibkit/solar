@@ -5,8 +5,7 @@ const PROXY_PORT = 1500;
 const TARGET_HOST = '127.0.0.1';
 const TARGET_PORT = 1600;
 const SECOND_WEB_SERVER_HOST = '127.0.0.1';
-const SECOND_WEB_SERVER_COLLECTOR_PORT = 3002; // Port for collector data
-const SECOND_WEB_SERVER_WEB_PORT = 3003; // Port for web server data
+const SECOND_WEB_SERVER_PORT = 3002; // Single port for both collector and web server data
 const HEALTH_CHECK_INTERVAL = 5000; // 5 seconds
 const MAX_RESTART_ATTEMPTS = 10;
 const RESTART_DELAY = 2000; // 2 seconds
@@ -18,27 +17,29 @@ let targetConnectionStatus = 'disconnected';
 
 // ===== SEND RAW DATA TO SECOND WEB SERVER =====
 function sendRawDataToSecondWebServer(data, source) {
-  // Determine port based on source
-  const port = source === 'COLLECTOR' ? SECOND_WEB_SERVER_COLLECTOR_PORT : SECOND_WEB_SERVER_WEB_PORT;
-  
-  const secondServerSocket = net.connect(port, SECOND_WEB_SERVER_HOST);
-  
+  const secondServerSocket = net.connect(SECOND_WEB_SERVER_PORT, SECOND_WEB_SERVER_HOST);
+
   secondServerSocket.on('connect', () => {
-    // Send raw data directly via TCP (Modbus TCP style)
-    secondServerSocket.write(data);
-    console.log(`✅ Raw data sent to second web server ${SECOND_WEB_SERVER_HOST}:${port} [Source: ${source}]`);
+    // Map source names to prefix
+    const sourcePrefix = source === 'COLLECTOR' ? 'COLLECTOR' : 'WEBSERVER';
+    const prefix = sourcePrefix + ':';
+
+    // Concatenate prefix and data into single buffer to ensure they arrive together
+    const prefixedData = Buffer.concat([Buffer.from(prefix), data]);
+    secondServerSocket.write(prefixedData);
+    console.log(`✅ Raw data sent to second web server ${SECOND_WEB_SERVER_HOST}:${SECOND_WEB_SERVER_PORT} [Source: ${source}]`);
     secondServerSocket.end();
   });
-  
+
   secondServerSocket.on('error', (err) => {
     console.error(`❌ Error sending to second web server [Source: ${source}]: ${err.message}`);
   });
-  
+
   secondServerSocket.on('timeout', () => {
     console.warn(`⚠️ Timeout sending to second web server [Source: ${source}]`);
     secondServerSocket.destroy();
   });
-  
+
   secondServerSocket.setTimeout(5000); // 5 second timeout
 }
 
@@ -175,8 +176,7 @@ function startProxy() {
   proxyServer.listen(PROXY_PORT, () => {
     console.log(`🚀 Proxy running on port ${PROXY_PORT}`);
     console.log(`📡 Forwarding to ${TARGET_HOST}:${TARGET_PORT}`);
-    console.log(`📊 Sending collector data to ${SECOND_WEB_SERVER_HOST}:${SECOND_WEB_SERVER_COLLECTOR_PORT}`);
-    console.log(`📊 Sending web data to ${SECOND_WEB_SERVER_HOST}:${SECOND_WEB_SERVER_WEB_PORT}`);
+    console.log(`📊 Sending data to ${SECOND_WEB_SERVER_HOST}:${SECOND_WEB_SERVER_PORT} (with source prefix)`);
     restartAttempts = 0;
   });
 }

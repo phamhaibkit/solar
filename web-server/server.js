@@ -23,8 +23,7 @@ const {
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
-const TCP_COLLECTOR_PORT = 3002; // Port for collector data
-const TCP_WEB_PORT = 3003; // Port for web server data
+const TCP_DATA_PORT = 3002; // Single port for both collector and web server data
 
 // WebSocket Server
 const wss = new WebSocket.Server({ server });
@@ -32,13 +31,6 @@ const wss = new WebSocket.Server({ server });
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
-
-// Health check endpoint — must be registered before static file serving
-// so Railway's GET / healthcheck always receives a 200 response
-app.get('/', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
-
 app.use(express.static('dashboard/dist'));
 app.use(express.static('public')); // Fallback to old public folder
 
@@ -175,114 +167,76 @@ wss.on('connection', (ws) => {
 // Start server
 async function startServer() {
   await initDatabase();
-  
+
   server.listen(PORT, () => {
     console.log(`🚀 ATESS Web Server running on http://localhost:${PORT}`);
     console.log(`📡 WebSocket server ready`);
     console.log(`💾 TimescaleDB connected`);
   });
+
+  // Start TCP server
+  tcpServer.listen(TCP_DATA_PORT, () => {
+    console.log(`📡 TCP server listening on port ${TCP_DATA_PORT} (with source prefix parsing)`);
+  });
 }
 
-// ===== TCP SERVERS =====
+// ===== TCP SERVER =====
 
-// TCP Server for Collector Data (port 3002)
-const collectorTcpServer = net.createServer(socket => {
+// Single TCP Server for both Collector and Web Server Data (port 3002)
+const tcpServer = net.createServer(socket => {
   socket.on('data', async (data) => {
-    console.log('📊 Received TCP data from COLLECTOR on port', TCP_COLLECTOR_PORT);
+    const dataString = data.toString();
+    let source = 'UNKNOWN';
+    let hexData = dataString;
+
+    // Parse source prefix from text
+    if (dataString.startsWith('COLLECTOR:')) {
+      source = 'COLLECTOR';
+      hexData = dataString.substring(10); // Remove "COLLECTOR:" (10 chars)
+    } else if (dataString.startsWith('WEBSERVER:')) {
+      source = 'WEB_SERVER';
+      hexData = dataString.substring(10); // Remove "WEBSERVER:" (10 chars)
+    }
+
+    console.log(`📊 Received TCP data from ${source} on port ${TCP_DATA_PORT}`);
+    console.log(`📝 Data string: ${dataString.substring(0, 50)}...`);
+
     try {
-      const hexString = data.toString('hex');
-      
+      // Convert binary data to hex string for database storage
+      const hexDataString = Buffer.from(hexData, 'utf8').toString('hex');
+
       // Save raw data to database first
-      await saveRawDataToDatabase('COLLECTOR', hexString);
-      
+      await saveRawDataToDatabase(source, hexDataString);
+
       // Try to parse - only save to atess_data if parsing succeeds (contains 0x24)
       try {
-        const parsedData = parsePacket(hexString);
+        const parsedData = parsePacket(hexDataString);
         const meaningfulData = extractMeaningfulFields(parsedData);
-        
+
         // Update latest data
         latestData = {
           ...meaningfulData,
           timestamp: new Date().toISOString()
         };
-        
+
         // Save parsed data to database
         await saveToDatabase(meaningfulData);
-        
+
         // Broadcast to WebSocket clients
         broadcastData(latestData);
-        
-        console.log('✅ Collector data processed and saved');
+
+        console.log(`✅ ${source} data processed and saved`);
       } catch (parseError) {
         console.log('⚠️  Invalid packet (no 0x24), skipping parse and save to atess_data');
       }
     } catch (error) {
-      console.error('❌ Error processing collector TCP data:', error.message);
+      console.error(`❌ Error processing ${source} TCP data:`, error.message);
     }
   });
-  
+
   socket.on('error', (err) => {
-    console.error('❌ Collector TCP socket error:', err.message);
+    console.error('❌ TCP socket error:', err.message);
   });
-});
-
-collectorTcpServer.on('error', (err) => {
-  console.error(`❌ Collector TCP server failed to start on port ${TCP_COLLECTOR_PORT}: ${err.message}`);
-  console.log(`⚠️  Continuing without Collector TCP server — main Express server is unaffected`);
-});
-
-collectorTcpServer.listen(TCP_COLLECTOR_PORT, () => {
-  console.log(`✅ Collector TCP server listening on port ${TCP_COLLECTOR_PORT}`);
-});
-
-// TCP Server for Web Server Data (port 3003)
-const webTcpServer = net.createServer(socket => {
-  socket.on('data', async (data) => {
-    console.log('📊 Received TCP data from WEB SERVER on port', TCP_WEB_PORT);
-    try {
-      const hexString = data.toString('hex');
-      
-      // Save raw data to database first
-      await saveRawDataToDatabase('WEB_SERVER', hexString);
-      
-      // Try to parse - only save to atess_data if parsing succeeds (contains 0x24)
-      try {
-        const parsedData = parsePacket(hexString);
-        const meaningfulData = extractMeaningfulFields(parsedData);
-        
-        // Update latest data
-        latestData = {
-          ...meaningfulData,
-          timestamp: new Date().toISOString()
-        };
-        
-        // Save parsed data to database
-        await saveToDatabase(meaningfulData);
-        
-        // Broadcast to WebSocket clients
-        broadcastData(latestData);
-        
-        console.log('✅ Web server data processed and saved');
-      } catch (parseError) {
-        console.log('⚠️  Invalid packet (no 0x24), skipping parse and save to atess_data');
-      }
-    } catch (error) {
-      console.error('❌ Error processing web server TCP data:', error.message);
-    }
-  });
-  
-  socket.on('error', (err) => {
-    console.error('❌ Web TCP socket error:', err.message);
-  });
-});
-
-webTcpServer.on('error', (err) => {
-  console.error(`❌ Web TCP server failed to start on port ${TCP_WEB_PORT}: ${err.message}`);
-  console.log(`⚠️  Continuing without Web TCP server — main Express server is unaffected`);
-});
-
-webTcpServer.listen(TCP_WEB_PORT, () => {
-  console.log(`✅ Web TCP server listening on port ${TCP_WEB_PORT}`);
 });
 
 startServer();
