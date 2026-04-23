@@ -37,9 +37,12 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-console.log('📁 Serving static files from dashboard/dist');
-app.use(express.static('dashboard/dist'));
-app.use(express.static('public')); // Fallback to old public folder
+const path = require('path');
+const distPath = path.join(__dirname, 'dashboard/dist');
+const publicPath = path.join(__dirname, 'public');
+console.log('📁 Serving static files from:', distPath);
+app.use(express.static(distPath));
+app.use(express.static(publicPath)); // Fallback to old public folder
 
 // Store latest data in memory
 let latestData = {
