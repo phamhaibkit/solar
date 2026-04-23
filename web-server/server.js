@@ -4,7 +4,7 @@ const http = require('http');
 const net = require('net');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const path = require('path');
+require('dotenv').config();
 
 // Import parser functions from proxy folder
 const { parsePacket } = require('./parser');
