@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 
 [deploy]
 startCommand = "node web-server/server.js"
-healthcheckPath = "/"
+healthcheckPath = "/health"
 
 [env]
 PORT = "3001"

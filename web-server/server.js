@@ -32,9 +32,8 @@ const wss = new WebSocket.Server({ server });
 app.use(cors());
 app.use(bodyParser.json());
 
-// Health check endpoint — must be registered before static file serving
-// so Railway's GET / healthcheck always receives a 200 response
-app.get('/', (req, res) => {
+// Health check endpoint for Railway
+app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
