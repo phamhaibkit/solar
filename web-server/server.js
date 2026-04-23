@@ -185,6 +185,7 @@ async function startServer() {
   });
 
   // Start TCP server only if enabled (for Railway multi-replica support)
+  console.log(`🔍 ENABLE_TCP_SERVER: ${process.env.ENABLE_TCP_SERVER}`);
   if (process.env.ENABLE_TCP_SERVER === 'true') {
     tcpServer.listen(TCP_DATA_PORT, () => {
       console.log(`📡 TCP server listening on port ${TCP_DATA_PORT} (with source prefix parsing)`);
