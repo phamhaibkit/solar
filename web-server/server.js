@@ -219,8 +219,13 @@ const collectorTcpServer = net.createServer(socket => {
   });
 });
 
+collectorTcpServer.on('error', (err) => {
+  console.error(`❌ Collector TCP server failed to start on port ${TCP_COLLECTOR_PORT}: ${err.message}`);
+  console.log(`⚠️  Continuing without Collector TCP server — main Express server is unaffected`);
+});
+
 collectorTcpServer.listen(TCP_COLLECTOR_PORT, () => {
-  console.log(`📡 Collector TCP server listening on port ${TCP_COLLECTOR_PORT}`);
+  console.log(`✅ Collector TCP server listening on port ${TCP_COLLECTOR_PORT}`);
 });
 
 // TCP Server for Web Server Data (port 3003)
@@ -264,8 +269,13 @@ const webTcpServer = net.createServer(socket => {
   });
 });
 
+webTcpServer.on('error', (err) => {
+  console.error(`❌ Web TCP server failed to start on port ${TCP_WEB_PORT}: ${err.message}`);
+  console.log(`⚠️  Continuing without Web TCP server — main Express server is unaffected`);
+});
+
 webTcpServer.listen(TCP_WEB_PORT, () => {
-  console.log(`📡 Web Server TCP server listening on port ${TCP_WEB_PORT}`);
+  console.log(`✅ Web TCP server listening on port ${TCP_WEB_PORT}`);
 });
 
 startServer();
