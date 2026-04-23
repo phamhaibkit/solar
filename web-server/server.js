@@ -37,6 +37,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+console.log('📁 Serving static files from dashboard/dist');
 app.use(express.static('dashboard/dist'));
 app.use(express.static('public')); // Fallback to old public folder
 
