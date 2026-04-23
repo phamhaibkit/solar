@@ -1,13 +1,14 @@
 <template>
   <div class="container">
     <h2>☀️ ATESS Solar Monitoring Dashboard</h2>
-    
+
     <div class="timestamp">{{ formattedTimestamp }}</div>
-    
+
     <div class="device-info">
       <div>Logger SN: {{ dashboard.data.device?.loggerSN || '-' }} | Device SN: {{ dashboard.data.device?.deviceSN || '-' }}</div>
+      <div :class="statusClass">Status: {{ dashboard.status }}</div>
     </div>
-    
+
     <div class="grid">
       <PvCard />
       <LoadCard />
@@ -32,7 +33,7 @@ import GenCard from '../components/GenCard.vue';
 import RealTimeChart from '../components/RealTimeChart.vue';
 
 const dashboard = useDashboardStore();
-const { formattedTimestamp, init, stopPolling } = dashboard;
+const { formattedTimestamp, statusClass, init, stopPolling } = dashboard;
 
 onMounted(() => {
   init();

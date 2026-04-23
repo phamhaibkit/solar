@@ -7,11 +7,11 @@
     <div class="grid-section">
       <div class="grid-item">
         <div class="label">Import</div>
-        <div class="value">{{ formatNumber(dashboard.data.grid?.import?.daily) }}</div>
+        <div class="value">{{ formatNumber(dashboard.displayData.grid?.import?.daily) }}</div>
       </div>
       <div class="grid-item">
         <div class="label">Export</div>
-        <div class="value">{{ formatNumber(dashboard.data.grid?.export?.daily) }}</div>
+        <div class="value">{{ formatNumber(dashboard.displayData.grid?.export?.daily) }}</div>
       </div>
     </div>
     <div class="card-label">Import from grid / Export to grid</div>

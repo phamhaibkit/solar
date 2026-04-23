@@ -4,7 +4,7 @@
       <span class="card-icon">🔌</span>
       <span class="card-title">Load Consumption</span>
     </div>
-    <div class="card-value">{{ formatNumber(dashboard.data.load?.daily) }}<span class="card-unit">kWh</span></div>
+    <div class="card-value">{{ formatNumber(dashboard.displayData.load?.daily) }}<span class="card-unit">kWh</span></div>
     <div class="card-label">Consumption of load</div>
   </div>
 </template>

@@ -6,11 +6,11 @@
     </div>
     <div class="battery-section">
       <div class="battery-item">
-        <div class="value">{{ formatNumber(dashboard.data.battery?.charge) }}</div>
+        <div class="value">{{ formatNumber(dashboard.displayData.battery?.charge) }}</div>
         <div class="unit">Charge</div>
       </div>
       <div class="battery-item">
-        <div class="value">{{ formatNumber(dashboard.data.battery?.discharge) }}</div>
+        <div class="value">{{ formatNumber(dashboard.displayData.battery?.discharge) }}</div>
         <div class="unit">Discharge</div>
       </div>
     </div>

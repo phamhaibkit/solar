@@ -20,7 +20,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     device: { loggerSN: '', deviceSN: '' }
   });
   
-  const status = ref<'Loading...' | 'Online' | 'Error'>('Loading...');
+  const status = ref<'Loading...' | 'Online' | 'Offline' | 'Error'>('Loading...');
   let pollingInterval: number | null = null;
   
   // Date range selection for chart
@@ -47,7 +47,38 @@ export const useDashboardStore = defineStore('dashboard', () => {
   });
 
   const statusClass = computed(() => {
-    return status.value === 'Online' ? 'status-online' : 'status-offline';
+    if (status.value === 'Online') return 'status-online';
+    if (status.value === 'Offline') return 'status-offline';
+    return 'status-offline';
+  });
+
+  const isOffline = computed(() => {
+    if (!data.value.timestamp) return true;
+    const dataTime = new Date(data.value.timestamp);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - dataTime.getTime()) / (1000 * 60);
+    return diffMinutes > 10;
+  });
+
+  const displayData = computed(() => {
+    if (isOffline.value) {
+      return {
+        pv: { daily: 0, total: 0, dailyUnit: 'kWh', totalUnit: 'MWh', label: 'Generated energy of PV' },
+        load: { daily: 0, total: 0, dailyUnit: 'kWh', totalUnit: 'kWh', label: 'Consumption of load' },
+        battery: { charge: 0, discharge: 0, unit: 'kWh', label: 'Battery charge/discharge' },
+        grid: {
+          import: { daily: 0, total: 0 },
+          export: { daily: 0, total: 0 },
+          dailyUnit: 'kWh',
+          totalUnit: 'MWh',
+          label: 'Import from grid / Export to grid'
+        },
+        gen: { daily: 0, total: 0, dailyUnit: 'kWh', totalUnit: 'MWh', label: 'GEN Energy' },
+        timestamp: data.value.timestamp,
+        device: data.value.device
+      };
+    }
+    return data.value;
   });
 
   // Methods
@@ -60,7 +91,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
     try {
       const latest = await apiService.getLatestData();
       data.value = latest;
-      status.value = 'Online';
+
+      // Check if data is older than 10 minutes
+      if (latest && latest.timestamp) {
+        const dataTime = new Date(latest.timestamp);
+        const now = new Date();
+        const diffMinutes = (now.getTime() - dataTime.getTime()) / (1000 * 60);
+        status.value = diffMinutes > 10 ? 'Offline' : 'Online';
+      } else {
+        status.value = 'Offline';
+      }
       
       // Add to history for chart (only if it's newer than last point)
       if (latest && latest.timestamp) {
@@ -161,6 +201,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   return {
     data,
+    displayData,
+    isOffline,
     status,
     formattedTimestamp,
     statusClass,
