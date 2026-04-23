@@ -14,7 +14,10 @@ const pool = new Pool({
 // Initialize PostgreSQL tables
 async function initDatabase() {
   try {
+    console.log('🔧 Initializing database...');
+
     // Raw data table
+    console.log('📝 Creating raw_data table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS raw_data (
         id SERIAL PRIMARY KEY,
@@ -25,15 +28,18 @@ async function initDatabase() {
         data TEXT NOT NULL
       );
     `);
+    console.log('✅ raw_data table created');
 
     // Create index for performance
     try {
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_raw_data_timestamp ON raw_data(timestamp)`);
+      console.log('✅ raw_data index created');
     } catch (indexError) {
       console.warn('⚠️  Could not create index for raw_data:', indexError.message);
     }
 
     // Parsed data table
+    console.log('📝 Creating atess_data table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS atess_data (
         time TIMESTAMPTZ NOT NULL,
@@ -54,10 +60,12 @@ async function initDatabase() {
         gen_total REAL
       );
     `);
+    console.log('✅ atess_data table created');
 
     // Create index for performance
     try {
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_atess_data_time ON atess_data(time)`);
+      console.log('✅ atess_data index created');
     } catch (indexError) {
       console.warn('⚠️  Could not create index for atess_data:', indexError.message);
     }
@@ -65,6 +73,7 @@ async function initDatabase() {
     console.log('✅ Database initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization error:', error.message);
+    console.error('❌ Error details:', error.stack);
   }
 }
 
