@@ -23,7 +23,7 @@ const {
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
-const TCP_DATA_PORT = 3003; // Single port for both collector and web server data
+const TCP_DATA_PORT = 3002; // Single port for both collector and web server data
 
 console.log(`🔍 HTTP PORT: ${PORT}`);
 console.log(`🔍 TCP DATA PORT: ${TCP_DATA_PORT}`);
@@ -189,15 +189,14 @@ async function startServer() {
   });
 
   // Start TCP server only if enabled (for Railway multi-replica support)
-  // TEMPORARILY DISABLED - Railway healthcheck is hitting TCP port instead of HTTP port
-  const enableTcpServer = false; // process.env.ENABLE_TCP_SERVER?.trim().replace(/^=/, '');
+  const enableTcpServer = process.env.ENABLE_TCP_SERVER?.trim().replace(/^=/, '');
   console.log(`🔍 ENABLE_TCP_SERVER: ${process.env.ENABLE_TCP_SERVER} -> ${enableTcpServer}`);
   if (enableTcpServer === 'true') {
     tcpServer.listen(TCP_DATA_PORT, () => {
       console.log(`📡 TCP server listening on port ${TCP_DATA_PORT} (with source prefix parsing)`);
     });
   } else {
-    console.log(`⚠️  TCP server disabled (Railway healthcheck conflict)`);
+    console.log(`⚠️  TCP server disabled (set ENABLE_TCP_SERVER=true to enable)`);
   }
 }
 
