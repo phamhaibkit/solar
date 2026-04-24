@@ -188,14 +188,15 @@ async function startServer() {
   });
 
   // Start TCP server only if enabled (for Railway multi-replica support)
-  const enableTcpServer = process.env.ENABLE_TCP_SERVER?.trim().replace(/^=/, '');
+  // TEMPORARILY DISABLED - Railway healthcheck is hitting TCP port instead of HTTP port
+  const enableTcpServer = false; // process.env.ENABLE_TCP_SERVER?.trim().replace(/^=/, '');
   console.log(`🔍 ENABLE_TCP_SERVER: ${process.env.ENABLE_TCP_SERVER} -> ${enableTcpServer}`);
   if (enableTcpServer === 'true') {
     tcpServer.listen(TCP_DATA_PORT, () => {
       console.log(`📡 TCP server listening on port ${TCP_DATA_PORT} (with source prefix parsing)`);
     });
   } else {
-    console.log(`⚠️  TCP server disabled (set ENABLE_TCP_SERVER=true to enable)`);
+    console.log(`⚠️  TCP server disabled (Railway healthcheck conflict)`);
   }
 }
 
