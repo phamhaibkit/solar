@@ -23,7 +23,7 @@ const {
 
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3001;
 const TCP_DATA_PORT = process.env.TCP_DATA_PORT || 3003; // Port for TCP data (default 3003 to avoid Railway proxy conflict)
 
 console.log(`🔍 HTTP PORT: ${PORT}`);
