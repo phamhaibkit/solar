@@ -6,7 +6,6 @@
 
     <div class="device-info">
       <div>Logger SN: {{ dashboard.data.device?.loggerSN || '-' }} | Device SN: {{ dashboard.data.device?.deviceSN || '-' }}</div>
-      <div :class="statusClass">Status: {{ dashboard.status }}</div>
     </div>
 
     <div class="grid">
@@ -33,7 +32,7 @@ import GenCard from '../components/GenCard.vue';
 import RealTimeChart from '../components/RealTimeChart.vue';
 
 const dashboard = useDashboardStore();
-const { formattedTimestamp, statusClass, init, stopPolling } = dashboard;
+const { formattedTimestamp, init, stopPolling } = dashboard;
 
 onMounted(() => {
   init();

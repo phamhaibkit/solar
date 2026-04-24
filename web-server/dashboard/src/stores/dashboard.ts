@@ -20,12 +20,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
     device: { loggerSN: '', deviceSN: '' }
   });
   
-  const status = ref<'Loading...' | 'Online' | 'Offline' | 'Error'>('Loading...');
   let pollingInterval: number | null = null;
-  
-  // Date range selection for chart
-  const startDate = ref<string>('');
-  const endDate = ref<string>('');
+
+  // Date range selection for chart (default to today)
+  const today = new Date().toISOString().split('T')[0];
+  const startDate = ref<string>(today);
+  const endDate = ref<string>(today);
   
   // History data for chart (max 50 points)
   const historyData = ref<Array<{
@@ -46,41 +46,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return new Date(data.value.timestamp).toLocaleString('vi-VN');
   });
 
-  const statusClass = computed(() => {
-    if (status.value === 'Online') return 'status-online';
-    if (status.value === 'Offline') return 'status-offline';
-    return 'status-offline';
-  });
-
-  const isOffline = computed(() => {
-    if (!data.value.timestamp) return true;
-    const dataTime = new Date(data.value.timestamp);
-    const now = new Date();
-    const diffMinutes = (now.getTime() - dataTime.getTime()) / (1000 * 60);
-    return diffMinutes > 10;
-  });
-
-  const displayData = computed(() => {
-    if (isOffline.value) {
-      return {
-        pv: { daily: 0, total: 0, dailyUnit: 'kWh', totalUnit: 'MWh', label: 'Generated energy of PV' },
-        load: { daily: 0, total: 0, dailyUnit: 'kWh', totalUnit: 'kWh', label: 'Consumption of load' },
-        battery: { charge: 0, discharge: 0, unit: 'kWh', label: 'Battery charge/discharge' },
-        grid: {
-          import: { daily: 0, total: 0 },
-          export: { daily: 0, total: 0 },
-          dailyUnit: 'kWh',
-          totalUnit: 'MWh',
-          label: 'Import from grid / Export to grid'
-        },
-        gen: { daily: 0, total: 0, dailyUnit: 'kWh', totalUnit: 'MWh', label: 'GEN Energy' },
-        timestamp: data.value.timestamp,
-        device: data.value.device
-      };
-    }
-    return data.value;
-  });
-
   // Methods
   const formatNumber = (num: number | null | undefined) => {
     if (num === null || num === undefined) return '0';
@@ -91,65 +56,17 @@ export const useDashboardStore = defineStore('dashboard', () => {
     try {
       const latest = await apiService.getLatestData();
       data.value = latest;
-
-      // Check if data is older than 10 minutes
-      if (latest && latest.timestamp) {
-        const dataTime = new Date(latest.timestamp);
-        const now = new Date();
-        const diffMinutes = (now.getTime() - dataTime.getTime()) / (1000 * 60);
-        status.value = diffMinutes > 10 ? 'Offline' : 'Online';
-      } else {
-        status.value = 'Offline';
-      }
-      
-      // Add to history for chart (only if it's newer than last point)
-      if (latest && latest.timestamp) {
-        const lastTimestamp = historyData.value.length > 0 
-          ? historyData.value[historyData.value.length - 1].timestamp 
-          : null;
-        
-        if (!lastTimestamp || new Date(latest.timestamp) > new Date(lastTimestamp)) {
-          const historyPoint = {
-            timestamp: latest.timestamp,
-            pvDaily: latest.pv?.daily || 0,
-            loadDaily: latest.load?.daily || 0,
-            batteryCharge: latest.battery?.charge || 0,
-            batteryDischarge: latest.battery?.discharge || 0,
-            batterySoc: latest.battery?.soc || 0,
-            gridImportDaily: latest.grid?.import?.daily || 0,
-            gridExportDaily: latest.grid?.export?.daily || 0,
-            genDaily: latest.gen?.daily || 0,
-          };
-          
-          historyData.value.push(historyPoint);
-          
-          // Keep only last 50 points
-          if (historyData.value.length > 50) {
-            historyData.value.shift();
-          }
-        }
-      }
     } catch (error) {
       console.error('Error fetching latest data:', error);
-      status.value = 'Error';
     }
   };
 
   const fetchHistoryData = async () => {
     try {
-      let hours = 1; // default 1 hour
-      
-      if (startDate.value && endDate.value) {
-        const start = new Date(startDate.value);
-        const end = new Date(endDate.value);
-        const diffMs = end.getTime() - start.getTime();
-        hours = Math.max(1, diffMs / (1000 * 60 * 60));
-      }
-      
-      const history = await apiService.getHistoryData(hours);
-      
-      // Transform history data to chart format
-      historyData.value = history.map((item: any) => ({
+      const chart = await apiService.getChartData(startDate.value, endDate.value);
+
+      // Transform chart data to chart format
+      historyData.value = chart.map((item: any) => ({
         timestamp: item.timestamp,
         pvDaily: item.pv?.daily || 0,
         loadDaily: item.load?.daily || 0,
@@ -160,24 +77,20 @@ export const useDashboardStore = defineStore('dashboard', () => {
         gridExportDaily: item.grid?.export?.daily || 0,
         genDaily: item.gen?.daily || 0,
       }));
-      
-      // Keep only last 50 points
-      if (historyData.value.length > 50) {
-        historyData.value = historyData.value.slice(-50);
-      }
     } catch (error) {
-      console.error('Error fetching history data:', error);
+      console.error('Error fetching chart data:', error);
     }
   };
 
   const startPolling = () => {
-    // Initial fetch - load history data first
+    // Initial fetch - load chart data and latest data
     fetchHistoryData();
     fetchLatestData();
-    
-    // Poll every 10 seconds for latest data
+
+    // Poll every 10 seconds for latest data and chart data
     pollingInterval = window.setInterval(() => {
       fetchLatestData();
+      fetchHistoryData();
     }, 10000);
   };
 
@@ -201,11 +114,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   return {
     data,
-    displayData,
-    isOffline,
-    status,
     formattedTimestamp,
-    statusClass,
     formatNumber,
     historyData,
     startDate,

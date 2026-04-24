@@ -4,7 +4,7 @@
       <span class="card-icon">⚙️</span>
       <span class="card-title">GEN Energy</span>
     </div>
-    <div class="card-value">{{ formatNumber(dashboard.displayData.gen?.daily) }}<span class="card-unit">kWh</span></div>
+    <div class="card-value">{{ formatNumber(dashboard.data.gen?.daily) }}<span class="card-unit">kWh</span></div>
     <div class="card-label">GEN Energy</div>
   </div>
 </template>

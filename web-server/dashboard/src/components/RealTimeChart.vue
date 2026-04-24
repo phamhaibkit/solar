@@ -27,10 +27,10 @@ ChartJS.register(
 );
 
 const dashboard = useDashboardStore();
-const { changeRange } = dashboard;
+const { changeRange, startDate, endDate } = dashboard;
 
-const tempStartDate = ref<string>('');
-const tempEndDate = ref<string>('');
+const tempStartDate = ref<string>(startDate);
+const tempEndDate = ref<string>(endDate);
 const isLoading = ref<boolean>(true);
 
 // Watch historyData to set loading state

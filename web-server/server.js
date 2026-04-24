@@ -17,6 +17,7 @@ const {
   saveToDatabase,
   getLatestData,
   getHistoryData,
+  getChartData,
   getRawData
 } = require('./database');
 
@@ -131,7 +132,18 @@ app.post('/api/data', async (req, res) => {
   }
 });
 
-// API endpoint to get latest data
+// API endpoint to get card data (latest data)
+app.get('/api/cards', async (req, res) => {
+  try {
+    const data = await getLatestData();
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Error fetching card data:', error);
+    res.json(latestData); // Fallback to memory if database fails
+  }
+});
+
+// API endpoint to get latest data (legacy, kept for compatibility)
 app.get('/api/data', async (req, res) => {
   try {
     const data = await getLatestData();
@@ -139,6 +151,18 @@ app.get('/api/data', async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching latest data:', error);
     res.json(latestData); // Fallback to memory if database fails
+  }
+});
+
+// API endpoint to get chart data (100 rows from current day or date range)
+app.get('/api/chart', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const data = await getChartData(startDate, endDate);
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Error fetching chart data:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -157,8 +181,8 @@ app.get('/api/history', async (req, res) => {
 // API endpoint to get raw data
 app.get('/api/raw-data', async (req, res) => {
   try {
-    const { source, limit = 100 } = req.query;
-    const data = await getRawData(source, parseInt(limit));
+    const { source, limit = 100, functionCode } = req.query;
+    const data = await getRawData(source, parseInt(limit), functionCode);
     res.json(data);
   } catch (error) {
     console.error('❌ Error fetching raw data:', error);

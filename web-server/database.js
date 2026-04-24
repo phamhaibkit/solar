@@ -233,7 +233,7 @@ async function getHistoryData(hours = 24) {
       ORDER BY time DESC
     `;
     const result = await pool.query(query);
-    
+
     // Transform flat database rows to nested structure for Vue
     return result.rows.map(row => ({
       timestamp: row.time,
@@ -284,28 +284,117 @@ async function getHistoryData(hours = 24) {
       }
     }));
   } catch (error) {
-    console.error('❌ Error getting history data:', error);
+    console.error('❌ Error getting historical data:', error);
+    return [];
+  }
+}
+
+// Get chart data with date range (default to today)
+async function getChartData(startDate = null, endDate = null) {
+  try {
+    let query = `SELECT * FROM atess_data`;
+    const params = [];
+
+    if (startDate && endDate) {
+      query += ` WHERE time >= $1 AND time <= $2`;
+      params.push(startDate, endDate);
+    } else {
+      // Default to today
+      query += ` WHERE time >= DATE_TRUNC('day', NOW())`;
+    }
+
+    query += ` ORDER BY time DESC LIMIT 100`;
+
+    const result = await pool.query(query, params);
+
+    // Transform flat database rows to nested structure for Vue
+    return result.rows.map(row => ({
+      timestamp: row.time,
+      device: {
+        loggerSN: row.logger_sn,
+        deviceSN: row.device_sn
+      },
+      pv: {
+        daily: row.pv_daily || 0,
+        total: row.pv_total || 0,
+        dailyUnit: 'kWh',
+        totalUnit: 'MWh',
+        label: 'Generated energy of PV'
+      },
+      load: {
+        daily: row.load_daily || 0,
+        total: row.load_total || 0,
+        dailyUnit: 'kWh',
+        totalUnit: 'kWh',
+        label: 'Consumption of load'
+      },
+      battery: {
+        charge: row.battery_charge || 0,
+        discharge: row.battery_discharge || 0,
+        soc: row.battery_soc || 0,
+        unit: 'kWh',
+        label: 'Battery charge/discharge'
+      },
+      grid: {
+        import: {
+          daily: row.grid_import_daily || 0,
+          total: row.grid_import_total || 0
+        },
+        export: {
+          daily: row.grid_export_daily || 0,
+          total: row.grid_export_total || 0
+        },
+        dailyUnit: 'kWh',
+        totalUnit: 'MWh',
+        label: 'Import from grid / Export to grid'
+      },
+      gen: {
+        daily: row.gen_daily || 0,
+        total: row.gen_total || 0,
+        dailyUnit: 'kWh',
+        totalUnit: 'MWh',
+        label: 'GEN Energy'
+      }
+    })).reverse(); // Reverse to show oldest first
+  } catch (error) {
+    console.error('❌ Error getting chart data:', error);
     return [];
   }
 }
 
 // Get raw data from database
-async function getRawData(source = null, limit = 100) {
+async function getRawData(source = null, limit = 100, functionCode = null) {
   try {
     let query = `
       SELECT * FROM raw_data
     `;
     const params = [];
-    
+
+    console.log(`📋 getRawData called with source: ${source}, limit: ${limit}, functionCode: ${functionCode}`);
+
     if (source) {
       query += ` WHERE source = $1`;
       params.push(source);
     }
-    
+
+    if (functionCode) {
+      if (source) {
+        query += ` AND function_code = $${params.length + 1}`;
+      } else {
+        query += ` WHERE function_code = $1`;
+      }
+      // Remove 0x prefix if present
+      const cleanFunctionCode = functionCode.replace(/^0x/i, '');
+      params.push(cleanFunctionCode);
+      console.log(`📋 Query with functionCode: ${query}, params: ${params}`);
+    }
+
     query += ` ORDER BY timestamp DESC LIMIT $${params.length + 1}`;
     params.push(limit);
-    
+
     const result = await pool.query(query, params);
+    console.log(`📋 Query returned ${result.rows.length} rows`);
+
     return result.rows;
   } catch (error) {
     console.error('❌ Error getting raw data:', error);
@@ -320,5 +409,6 @@ module.exports = {
   saveToDatabase,
   getLatestData,
   getHistoryData,
+  getChartData,
   getRawData
 };

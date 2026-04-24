@@ -13,13 +13,18 @@ interface RawDataRow {
 
 const rawData = ref<RawDataRow[]>([]);
 const selectedSource = ref<string>('');
+const selectedFunctionCode = ref<string>('');
 const limit = ref(20);
 const loading = ref(false);
 
 const fetchRawData = async () => {
   loading.value = true;
   try {
-    rawData.value = await apiService.getRawData(selectedSource.value || undefined, limit.value);
+    rawData.value = await apiService.getRawData(
+      selectedSource.value || undefined,
+      limit.value,
+      selectedFunctionCode.value || undefined
+    );
   } catch (error) {
     console.error('Error fetching raw data:', error);
   } finally {
@@ -50,11 +55,17 @@ const copyToClipboard = (text: string) => {
           <option value="COLLECTOR">COLLECTOR</option>
           <option value="WEB_SERVER">WEB_SERVER</option>
         </select>
-        <input 
-          v-model.number="limit" 
-          type="number" 
-          min="10" 
-          max="500" 
+        <select v-model="selectedFunctionCode" @change="fetchRawData" class="function-code-select">
+          <option value="">All Function Codes</option>
+          <option v-for="i in 48" :key="i" :value="'0x' + i.toString(16).padStart(2, '0').toUpperCase()">
+            0x{{ i.toString(16).padStart(2, '0').toUpperCase() }}
+          </option>
+        </select>
+        <input
+          v-model.number="limit"
+          type="number"
+          min="10"
+          max="500"
           @change="fetchRawData"
           class="limit-input"
           placeholder="Limit"
@@ -129,7 +140,7 @@ const copyToClipboard = (text: string) => {
   flex-wrap: wrap;
 }
 
-.source-select, .limit-input {
+.source-select, .function-code-select, .limit-input {
   padding: 8px 12px;
   border: none;
   border-radius: 6px;
