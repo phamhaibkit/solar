@@ -22,10 +22,10 @@ const {
 
 const app = express();
 const server = http.createServer(app);
-const WEB_PORT = process.env.WEB_PORT || 3001;
+const PORT = process.env.PORT || 3001;
 const TCP_DATA_PORT = 3003; // Single port for both collector and web server data
 
-console.log(`🔍 HTTP PORT: ${WEB_PORT}`);
+console.log(`🔍 HTTP PORT: ${PORT}`);
 console.log(`🔍 TCP DATA PORT: ${TCP_DATA_PORT}`);
 
 // WebSocket Server
@@ -182,8 +182,8 @@ wss.on('connection', (ws) => {
 async function startServer() {
   await initDatabase();
 
-  server.listen(WEB_PORT, () => {
-    console.log(`🚀 ATESS Web Server running on http://localhost:${WEB_PORT}`);
+  server.listen(PORT, () => {
+    console.log(`🚀 ATESS Web Server running on http://localhost:${PORT}`);
     console.log(`📡 WebSocket server ready`);
     console.log(`💾 TimescaleDB connected`);
   });
