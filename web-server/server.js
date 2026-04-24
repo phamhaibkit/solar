@@ -37,6 +37,7 @@ app.use(bodyParser.json());
 
 // Health check endpoint for Railway
 app.get('/health', (req, res) => {
+  console.log('🏥 Healthcheck called from:', req.ip);
   res.status(200).json({ status: 'ok' });
 });
 
