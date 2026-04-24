@@ -23,8 +23,8 @@ const {
 
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 3001;
-const TCP_DATA_PORT = 3002; // Single port for both collector and web server data
+const PORT = process.env.PORT || 8080;
+const TCP_DATA_PORT = process.env.TCP_DATA_PORT || 3003; // Port for TCP data (default 3003 to avoid Railway proxy conflict)
 
 console.log(`🔍 HTTP PORT: ${PORT}`);
 console.log(`🔍 TCP DATA PORT: ${TCP_DATA_PORT}`);
@@ -218,6 +218,12 @@ async function startServer() {
   if (enableTcpServer === 'true') {
     tcpServer.listen(TCP_DATA_PORT, () => {
       console.log(`📡 TCP server listening on port ${TCP_DATA_PORT} (with source prefix parsing)`);
+    }).on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`⚠️  Port ${TCP_DATA_PORT} already in use, TCP server not started`);
+      } else {
+        console.error('❌ TCP server error:', err);
+      }
     });
   } else {
     console.log(`⚠️  TCP server disabled (set ENABLE_TCP_SERVER=true to enable)`);
