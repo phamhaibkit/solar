@@ -19,6 +19,9 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  // Disable pg_stat_statements to fix Railway error
+  statement_timeout: '30s',
+  options: '-c statement_timeout=30s -c track_activity_query_size=0'
 });
 
 // Initialize PostgreSQL tables
@@ -152,6 +155,11 @@ async function saveToDatabase(data) {
     await pool.query(query, values);
     console.log('💾 Data saved to TimescaleDB');
   } catch (error) {
+    // Ignore pg_stat_statements errors (Railway issue)
+    if (error.message && error.message.includes('pg_stat_statements')) {
+      console.warn('⚠️  Ignoring pg_statements error in saveToDatabase (Railway limitation)');
+      return;
+    }
     console.error('❌ Error saving to database:', error);
   }
 }
@@ -219,6 +227,11 @@ async function getLatestData() {
       }
     };
   } catch (error) {
+    // Ignore pg_stat_statements errors (Railway issue)
+    if (error.message && error.message.includes('pg_stat_statements')) {
+      console.warn('⚠️  Ignoring pg_statements error in getLatestData (Railway limitation)');
+      return null;
+    }
     console.error('❌ Error getting latest data:', error);
     return null;
   }
@@ -284,6 +297,11 @@ async function getHistoryData(hours = 24) {
       }
     }));
   } catch (error) {
+    // Ignore pg_statements errors (Railway issue)
+    if (error.message && error.message.includes('pg_statements')) {
+      console.warn('⚠️  Ignoring pg_statements error in getHistoryData (Railway limitation)');
+      return [];
+    }
     console.error('❌ Error getting historical data:', error);
     return [];
   }
@@ -357,6 +375,11 @@ async function getChartData(startDate = null, endDate = null) {
       }
     })).reverse(); // Reverse to show oldest first
   } catch (error) {
+    // Ignore pg_statements errors (Railway issue)
+    if (error.message && error.message.includes('pg_statements')) {
+      console.warn('⚠️  Ignoring pg_statements error in getChartData (Railway limitation)');
+      return [];
+    }
     console.error('❌ Error getting chart data:', error);
     return [];
   }
@@ -397,6 +420,11 @@ async function getRawData(source = null, limit = 100, functionCode = null) {
 
     return result.rows;
   } catch (error) {
+    // Ignore pg_stat_statements errors (Railway issue)
+    if (error.message && error.message.includes('pg_stat_statements')) {
+      console.warn('⚠️  Ignoring pg_stat_statements error (Railway limitation)');
+      return [];
+    }
     console.error('❌ Error getting raw data:', error);
     return [];
   }
