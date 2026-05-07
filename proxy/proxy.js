@@ -2,6 +2,8 @@ const net = require('net');
 
 // ===== CONFIG =====
 const PROXY_PORT = 1500;
+// const TARGET_HOST = 'www.enerclo-atesspower.com';
+// const TARGET_PORT = 5279;
 const TARGET_HOST = '127.0.0.1';
 const TARGET_PORT = 1600;
 const SECOND_WEB_SERVER_HOST = 'shortline.proxy.rlwy.net';
