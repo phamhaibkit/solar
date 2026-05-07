@@ -140,7 +140,7 @@ async function saveCardData(meaningfulData) {
         battery_charge, battery_discharge, battery_unit, battery_label,
         grid_import_daily, grid_export_daily, grid_unit, grid_label,
         gen_daily, gen_unit, gen_label
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
     `;
 
     const values = [
@@ -163,7 +163,7 @@ async function saveCardData(meaningfulData) {
       meaningfulData.grid?.label || 'Import from grid / Export to grid',
       meaningfulData.gen?.daily || 0,
       meaningfulData.gen?.dailyUnit || 'kWh',
-      meaningfulData.gen?.label || 'GEN Energy'
+      meaningfulData.gen?.label || 'Energy of import from GEN'
     ];
 
     await pool.query(query, values);
@@ -189,7 +189,7 @@ async function saveChartData(meaningfulData) {
         battery_power, battery_soc, battery_unit, battery_label,
         grid_power, grid_unit, grid_label,
         gen_power, gen_unit, gen_label
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
     `;
 
     const values = [
