@@ -257,6 +257,69 @@ async function saveRawDataToDatabase(source, hexString) {
   }
 }
 
+// Get latest data from card_data table
+async function getLatestData() {
+  try {
+    const query = `
+      SELECT * FROM card_data
+      ORDER BY timestamp DESC
+      LIMIT 1
+    `;
+    const result = await pool.query(query);
+    const row = result.rows[0];
+    
+    if (!row) return null;
+    
+    // Transform flat database row to nested structure for Vue
+    return {
+      timestamp: row.timestamp,
+      device: {
+        loggerSN: row.logger_sn,
+        deviceSN: row.device_sn
+      },
+      pv: {
+        daily: row.pv_daily || 0,
+        dailyUnit: 'kWh',
+        label: 'Generated energy of PV'
+      },
+      load: {
+        daily: row.load_daily || 0,
+        dailyUnit: 'kWh',
+        label: 'Consumption of load'
+      },
+      battery: {
+        charge: row.battery_charge || 0,
+        discharge: row.battery_discharge || 0,
+        unit: 'kWh',
+        label: 'Battery charge/discharge'
+      },
+      grid: {
+        import: {
+          daily: row.grid_import_daily || 0
+        },
+        export: {
+          daily: row.grid_export_daily || 0
+        },
+        dailyUnit: 'kWh',
+        label: 'Import from grid / Export to grid'
+      },
+      gen: {
+        daily: row.gen_daily || 0,
+        dailyUnit: 'kWh',
+        label: 'GEN Energy'
+      }
+    };
+  } catch (error) {
+    // Ignore pg_statements errors (Railway issue)
+    if (error.message && error.message.includes('pg_statements')) {
+      console.warn('⚠️  Ignoring pg_statements error in getLatestData (Railway limitation)');
+      return null;
+    }
+    console.error('❌ Error getting latest data:', error);
+    return null;
+  }
+}
+
 // Get historical data from database
 async function getHistoryData(hours = 24) {
   try {
