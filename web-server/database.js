@@ -83,10 +83,180 @@ async function initDatabase() {
       console.warn('⚠️  Could not create index for atess_data:', indexError.message);
     }
 
+    // CARD data table (kWh - daily energy)
+    console.log('📝 Creating card_data table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS card_data (
+        id SERIAL PRIMARY KEY,
+        timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        logger_sn TEXT,
+        device_sn TEXT,
+        pv_daily REAL,
+        pv_unit TEXT DEFAULT 'kWh',
+        pv_label TEXT DEFAULT 'Generated energy of PV',
+        load_daily REAL,
+        load_unit TEXT DEFAULT 'kWh',
+        load_label TEXT DEFAULT 'Consumption of load',
+        battery_charge REAL,
+        battery_discharge REAL,
+        battery_unit TEXT DEFAULT 'kWh',
+        battery_label TEXT DEFAULT 'Battery charge/discharge',
+        grid_import_daily REAL,
+        grid_export_daily REAL,
+        grid_unit TEXT DEFAULT 'kWh',
+        grid_label TEXT DEFAULT 'Import from grid / Export to grid',
+        gen_daily REAL,
+        gen_unit TEXT DEFAULT 'kWh',
+        gen_label TEXT DEFAULT 'GEN Energy'
+      );
+    `);
+    console.log('✅ card_data table created');
+
+    // Create index for card_data table
+    try {
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_card_data_timestamp ON card_data(timestamp)`);
+      console.log('✅ card_data index created');
+    } catch (indexError) {
+      console.warn('⚠️  Could not create index for card_data:', indexError.message);
+    }
+
+    // CHART data table (kW - realtime power)
+    console.log('📝 Creating chart_data table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chart_data (
+        id SERIAL PRIMARY KEY,
+        timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        logger_sn TEXT,
+        device_sn TEXT,
+        pv_power REAL,
+        pv_unit TEXT DEFAULT 'kW',
+        pv_label TEXT DEFAULT 'PV power',
+        load_power REAL,
+        load_unit TEXT DEFAULT 'kW',
+        load_label TEXT DEFAULT 'Load power',
+        battery_power REAL,
+        battery_soc REAL,
+        battery_unit TEXT DEFAULT 'kW',
+        battery_label TEXT DEFAULT 'Battery power',
+        grid_power REAL,
+        grid_unit TEXT DEFAULT 'kW',
+        grid_label TEXT DEFAULT 'Grid power',
+        gen_power REAL,
+        gen_unit TEXT DEFAULT 'kW',
+        gen_label TEXT DEFAULT 'GEN power'
+      );
+    `);
+    console.log('✅ chart_data table created');
+
+    // Create index for chart_data table
+    try {
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_chart_data_timestamp ON chart_data(timestamp)`);
+      console.log('✅ chart_data index created');
+    } catch (indexError) {
+      console.warn('⚠️  Could not create index for chart_data:', indexError.message);
+    }
+
     console.log('✅ Database initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization error:', error.message);
     console.error('❌ Error details:', error.stack);
+  }
+}
+
+// Save CARD data (kWh - daily energy)
+async function saveCardData(meaningfulData) {
+  try {
+    const query = `
+      INSERT INTO card_data (
+        timestamp, logger_sn, device_sn,
+        pv_daily, pv_unit, pv_label,
+        load_daily, load_unit, load_label,
+        battery_charge, battery_discharge, battery_unit, battery_label,
+        grid_import_daily, grid_export_daily, grid_unit, grid_label,
+        gen_daily, gen_unit, gen_label
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+    `;
+
+    const values = [
+      meaningfulData.timestamp || new Date(),
+      meaningfulData.device?.loggerSN || null,
+      meaningfulData.device?.deviceSN || null,
+      meaningfulData.pv?.daily || 0,
+      meaningfulData.pv?.dailyUnit || 'kWh',
+      meaningfulData.pv?.label || 'Generated energy of PV',
+      meaningfulData.load?.daily || 0,
+      meaningfulData.load?.dailyUnit || 'kWh',
+      meaningfulData.load?.label || 'Consumption of load',
+      meaningfulData.battery?.charge || 0,
+      meaningfulData.battery?.discharge || 0,
+      meaningfulData.battery?.unit || 'kWh',
+      meaningfulData.battery?.label || 'Battery charge/discharge',
+      meaningfulData.grid?.import?.daily || 0,
+      meaningfulData.grid?.export?.daily || 0,
+      meaningfulData.grid?.dailyUnit || 'kWh',
+      meaningfulData.grid?.label || 'Import from grid / Export to grid',
+      meaningfulData.gen?.daily || 0,
+      meaningfulData.gen?.dailyUnit || 'kWh',
+      meaningfulData.gen?.label || 'GEN Energy'
+    ];
+
+    await pool.query(query, values);
+    console.log('💾 CARD data saved to card_data table');
+  } catch (error) {
+    // Ignore pg_statements errors (Railway issue)
+    if (error.message && error.message.includes('pg_statements')) {
+      console.warn('⚠️  Ignoring pg_statements error in saveCardData (Railway limitation)');
+      return;
+    }
+    console.error('❌ Error saving CARD data to database:', error);
+  }
+}
+
+// Save CHART data (kW - realtime power)
+async function saveChartData(meaningfulData) {
+  try {
+    const query = `
+      INSERT INTO chart_data (
+        timestamp, logger_sn, device_sn,
+        pv_power, pv_unit, pv_label,
+        load_power, load_unit, load_label,
+        battery_power, battery_soc, battery_unit, battery_label,
+        grid_power, grid_unit, grid_label,
+        gen_power, gen_unit, gen_label
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+    `;
+
+    const values = [
+      meaningfulData.timestamp || new Date(),
+      meaningfulData.device?.loggerSN || null,
+      meaningfulData.device?.deviceSN || null,
+      meaningfulData.pv?.power || 0,
+      meaningfulData.pv?.powerUnit || 'kW',
+      meaningfulData.pv?.powerLabel || 'PV power',
+      meaningfulData.load?.power || 0,
+      meaningfulData.load?.powerUnit || 'kW',
+      meaningfulData.load?.powerLabel || 'Load power',
+      meaningfulData.battery?.power || 0,
+      meaningfulData.battery?.soc || 0,
+      meaningfulData.battery?.powerUnit || 'kW',
+      meaningfulData.battery?.powerLabel || 'Battery power',
+      meaningfulData.grid?.power || 0,
+      meaningfulData.grid?.powerUnit || 'kW',
+      meaningfulData.grid?.powerLabel || 'Grid power',
+      meaningfulData.gen?.power || 0,
+      meaningfulData.gen?.powerUnit || 'kW',
+      meaningfulData.gen?.powerLabel || 'GEN power'
+    ];
+
+    await pool.query(query, values);
+    console.log('💾 CHART data saved to chart_data table');
+  } catch (error) {
+    // Ignore pg_statements errors (Railway issue)
+    if (error.message && error.message.includes('pg_statements')) {
+      console.warn('⚠️  Ignoring pg_statements error in saveChartData (Railway limitation)');
+      return;
+    }
+    console.error('❌ Error saving CHART data to database:', error);
   }
 }
 
@@ -435,6 +605,8 @@ module.exports = {
   initDatabase,
   saveRawDataToDatabase,
   saveToDatabase,
+  saveCardData,
+  saveChartData,
   getLatestData,
   getHistoryData,
   getChartData,

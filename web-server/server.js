@@ -14,7 +14,8 @@ const { extractMeaningfulFields } = require('./export_meaningful_fields');
 const {
   initDatabase,
   saveRawDataToDatabase,
-  saveToDatabase,
+  saveCardData,
+  saveChartData,
   getLatestData,
   getHistoryData,
   getChartData,
@@ -270,13 +271,16 @@ const tcpServer = net.createServer(socket => {
           timestamp: new Date().toISOString()
         };
 
-        // Save parsed data to database
-        await saveToDatabase(meaningfulData);
+        // Save CARD data (kWh daily)
+        await saveCardData(meaningfulData);
+        
+        // Save CHART data (kW realtime)
+        await saveChartData(meaningfulData);
 
         // Broadcast to WebSocket clients
         broadcastData(latestData);
 
-        console.log(`✅ ${source} data processed and saved`);
+        console.log(`✅ ${source} data processed and saved to CARD and CHART tables`);
       } catch (parseError) {
         console.log('⚠️  Invalid packet (no 0x24), skipping parse and save to atess_data');
       }
