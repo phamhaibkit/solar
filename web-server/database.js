@@ -17,7 +17,7 @@ const pool = new Pool({
     user: process.env.PGUSER || 'postgres',
     password: process.env.PGPASSWORD || 'password',
   },
-  // Disable pg_stat_statements to avoid Railway issues
+  // Disable pg_statements to avoid Railway issues
   statement_timeout: 30000,
   query_timeout: 30000,
 });
@@ -48,7 +48,6 @@ async function initDatabase() {
     } catch (indexError) {
       console.warn('⚠️  Could not create index for raw_data:', indexError.message);
     }
-
     
     // CARD data table (kWh - daily energy)
     console.log('📝 Creating card_data table...');
