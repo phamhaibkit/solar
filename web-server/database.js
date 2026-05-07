@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 require('dotenv').config();
+
 // PostgreSQL Connection
 // Use DATABASE_URL for Railway, fallback to individual PG* env vars, then localhost for development
 console.log('🔍 DATABASE_URL:', process.env.DATABASE_URL);
@@ -8,37 +9,34 @@ console.log('🔍 PGPORT:', process.env.PGPORT);
 console.log('🔍 PGUSER:', process.env.PGUSER);
 console.log('🔍 PGDATABASE:', process.env.PGDATABASE);
 
-const fallbackConnectionString = process.env.PGHOST
-  ? `postgresql://${process.env.PGUSER}:${process.env.PGPASSWORD}@${process.env.PGHOST}:${process.env.PGPORT || 5432}/${process.env.PGDATABASE}`
-  : 'postgresql://postgres:12345678x@X@localhost:5432/postgres';
-
-const connectionString = process.env.DATABASE_URL || fallbackConnectionString;
-
 const pool = new Pool({
-  connectionString,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-  // Disable pg_stat_statements to fix Railway error
-  statement_timeout: '30s',
-  options: '-c statement_timeout=30s'
+  connectionString: process.env.DATABASE_URL || {
+    host: process.env.PGHOST || 'localhost',
+    port: process.env.PGPORT || 5432,
+    database: process.env.PGDATABASE || 'atess',
+    user: process.env.PGUSER || 'postgres',
+    password: process.env.PGPASSWORD || 'password',
+  },
+  // Disable pg_stat_statements to avoid Railway issues
+  statement_timeout: 30000,
+  query_timeout: 30000,
 });
 
-// Initialize PostgreSQL tables
+// Initialize database tables
 async function initDatabase() {
   try {
-    console.log('🔧 Initializing database...');
-
+    console.log('🧠 Initializing database...');
+    
     // Raw data table
     console.log('📝 Creating raw_data table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS raw_data (
         id SERIAL PRIMARY KEY,
         function_code TEXT,
-        source TEXT NOT NULL,
+        source TEXT,
         timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        data_length INTEGER NOT NULL,
-        data TEXT NOT NULL
+        data_length INTEGER,
+        data TEXT
       );
     `);
     console.log('✅ raw_data table created');
