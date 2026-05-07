@@ -51,38 +51,7 @@ async function initDatabase() {
       console.warn('⚠️  Could not create index for raw_data:', indexError.message);
     }
 
-    // Parsed data table
-    console.log('📝 Creating atess_data table...');
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS atess_data (
-        time TIMESTAMPTZ NOT NULL,
-        logger_sn TEXT,
-        device_sn TEXT,
-        pv_daily REAL,
-        pv_total REAL,
-        load_daily REAL,
-        load_total REAL,
-        battery_charge REAL,
-        battery_discharge REAL,
-        battery_soc REAL,
-        grid_import_daily REAL,
-        grid_import_total REAL,
-        grid_export_daily REAL,
-        grid_export_total REAL,
-        gen_daily REAL,
-        gen_total REAL
-      );
-    `);
-    console.log('✅ atess_data table created');
-
-    // Create index for performance
-    try {
-      await pool.query(`CREATE INDEX IF NOT EXISTS idx_atess_data_time ON atess_data(time)`);
-      console.log('✅ atess_data index created');
-    } catch (indexError) {
-      console.warn('⚠️  Could not create index for atess_data:', indexError.message);
-    }
-
+    
     // CARD data table (kWh - daily energy)
     console.log('📝 Creating card_data table...');
     await pool.query(`
@@ -288,181 +257,52 @@ async function saveRawDataToDatabase(source, hexString) {
   }
 }
 
-// Save parsed data to TimescaleDB
-async function saveToDatabase(data) {
-  try {
-    const query = `
-      INSERT INTO atess_data (
-        time, logger_sn, device_sn,
-        pv_daily, pv_total,
-        load_daily, load_total,
-        battery_charge, battery_discharge, battery_soc,
-        grid_import_daily, grid_import_total,
-        grid_export_daily, grid_export_total,
-        gen_daily, gen_total
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-    `;
-
-    const values = [
-      data.timestamp || new Date(),
-      data.device?.loggerSN || null,
-      data.device?.deviceSN || null,
-      data.pv?.daily || 0,
-      data.pv?.total || 0,
-      data.load?.daily || 0,
-      data.load?.total || 0,
-      data.battery?.charge || 0,
-      data.battery?.discharge || 0,
-      data.battery?.soc || 0,
-      data.grid?.import?.daily || 0,
-      data.grid?.import?.total || 0,
-      data.grid?.export?.daily || 0,
-      data.grid?.export?.total || 0,
-      data.gen?.daily || 0,
-      data.gen?.total || 0
-    ];
-
-    await pool.query(query, values);
-    console.log('💾 Data saved to TimescaleDB');
-  } catch (error) {
-    // Ignore pg_stat_statements errors (Railway issue)
-    if (error.message && error.message.includes('pg_stat_statements')) {
-      console.warn('⚠️  Ignoring pg_statements error in saveToDatabase (Railway limitation)');
-      return;
-    }
-    console.error('❌ Error saving to database:', error);
-  }
-}
-
-// Get latest data from database
-async function getLatestData() {
-  try {
-    const query = `
-      SELECT * FROM atess_data
-      ORDER BY time DESC
-      LIMIT 1
-    `;
-    const result = await pool.query(query);
-    const row = result.rows[0];
-    
-    if (!row) return null;
-    
-    // Transform flat database row to nested structure for Vue
-    return {
-      timestamp: row.time,
-      device: {
-        loggerSN: row.logger_sn,
-        deviceSN: row.device_sn
-      },
-      pv: {
-        daily: row.pv_daily || 0,
-        total: row.pv_total || 0,
-        dailyUnit: 'kWh',
-        totalUnit: 'MWh',
-        label: 'Generated energy of PV'
-      },
-      load: {
-        daily: row.load_daily || 0,
-        total: row.load_total || 0,
-        dailyUnit: 'kWh',
-        totalUnit: 'kWh',
-        label: 'Consumption of load'
-      },
-      battery: {
-        charge: row.battery_charge || 0,
-        discharge: row.battery_discharge || 0,
-        soc: row.battery_soc || 0,
-        unit: 'kWh',
-        label: 'Battery charge/discharge'
-      },
-      grid: {
-        import: {
-          daily: row.grid_import_daily || 0,
-          total: row.grid_import_total || 0
-        },
-        export: {
-          daily: row.grid_export_daily || 0,
-          total: row.grid_export_total || 0
-        },
-        dailyUnit: 'kWh',
-        totalUnit: 'MWh',
-        label: 'Import from grid / Export to grid'
-      },
-      gen: {
-        daily: row.gen_daily || 0,
-        total: row.gen_total || 0,
-        dailyUnit: 'kWh',
-        totalUnit: 'MWh',
-        label: 'GEN Energy'
-      }
-    };
-  } catch (error) {
-    // Ignore pg_stat_statements errors (Railway issue)
-    if (error.message && error.message.includes('pg_stat_statements')) {
-      console.warn('⚠️  Ignoring pg_statements error in getLatestData (Railway limitation)');
-      return null;
-    }
-    console.error('❌ Error getting latest data:', error);
-    return null;
-  }
-}
-
 // Get historical data from database
 async function getHistoryData(hours = 24) {
   try {
     const query = `
-      SELECT * FROM atess_data
-      WHERE time > NOW() - INTERVAL '${hours} hours'
-      ORDER BY time DESC
+      SELECT * FROM card_data
+      WHERE timestamp > NOW() - INTERVAL '${hours} hours'
+      ORDER BY timestamp DESC
     `;
     const result = await pool.query(query);
 
     // Transform flat database rows to nested structure for Vue
     return result.rows.map(row => ({
-      timestamp: row.time,
+      timestamp: row.timestamp,
       device: {
         loggerSN: row.logger_sn,
         deviceSN: row.device_sn
       },
       pv: {
         daily: row.pv_daily || 0,
-        total: row.pv_total || 0,
         dailyUnit: 'kWh',
-        totalUnit: 'MWh',
         label: 'Generated energy of PV'
       },
       load: {
         daily: row.load_daily || 0,
-        total: row.load_total || 0,
         dailyUnit: 'kWh',
-        totalUnit: 'kWh',
         label: 'Consumption of load'
       },
       battery: {
         charge: row.battery_charge || 0,
         discharge: row.battery_discharge || 0,
-        soc: row.battery_soc || 0,
         unit: 'kWh',
         label: 'Battery charge/discharge'
       },
       grid: {
         import: {
-          daily: row.grid_import_daily || 0,
-          total: row.grid_import_total || 0
+          daily: row.grid_import_daily || 0
         },
         export: {
-          daily: row.grid_export_daily || 0,
-          total: row.grid_export_total || 0
+          daily: row.grid_export_daily || 0
         },
         dailyUnit: 'kWh',
-        totalUnit: 'MWh',
         label: 'Import from grid / Export to grid'
       },
       gen: {
         daily: row.gen_daily || 0,
-        total: row.gen_total || 0,
         dailyUnit: 'kWh',
-        totalUnit: 'MWh',
         label: 'GEN Energy'
       }
     }));
@@ -480,68 +320,53 @@ async function getHistoryData(hours = 24) {
 // Get chart data with date range (default to today)
 async function getChartData(startDate = null, endDate = null) {
   try {
-    let query = `SELECT * FROM atess_data`;
+    let query = `SELECT * FROM chart_data`;
     const params = [];
 
     if (startDate && endDate) {
-      query += ` WHERE time >= $1 AND time <= $2`;
+      query += ` WHERE timestamp >= $1 AND timestamp <= $2`;
       params.push(startDate, endDate);
     } else {
       // Default to today
-      query += ` WHERE time >= DATE_TRUNC('day', NOW())`;
+      query += ` WHERE timestamp >= DATE_TRUNC('day', NOW())`;
     }
 
-    query += ` ORDER BY time DESC LIMIT 100`;
+    query += ` ORDER BY timestamp DESC LIMIT 100`;
 
     const result = await pool.query(query, params);
 
     // Transform flat database rows to nested structure for Vue
     return result.rows.map(row => ({
-      timestamp: row.time,
+      timestamp: row.timestamp,
       device: {
         loggerSN: row.logger_sn,
         deviceSN: row.device_sn
       },
       pv: {
-        daily: row.pv_daily || 0,
-        total: row.pv_total || 0,
-        dailyUnit: 'kWh',
-        totalUnit: 'MWh',
-        label: 'Generated energy of PV'
+        power: row.pv_power || 0,
+        powerUnit: 'kW',
+        powerLabel: 'PV power'
       },
       load: {
-        daily: row.load_daily || 0,
-        total: row.load_total || 0,
-        dailyUnit: 'kWh',
-        totalUnit: 'kWh',
-        label: 'Consumption of load'
+        power: row.load_power || 0,
+        powerUnit: 'kW',
+        powerLabel: 'Load power'
       },
       battery: {
-        charge: row.battery_charge || 0,
-        discharge: row.battery_discharge || 0,
+        power: row.battery_power || 0,
         soc: row.battery_soc || 0,
-        unit: 'kWh',
-        label: 'Battery charge/discharge'
+        powerUnit: 'kW',
+        powerLabel: 'Battery power'
       },
       grid: {
-        import: {
-          daily: row.grid_import_daily || 0,
-          total: row.grid_import_total || 0
-        },
-        export: {
-          daily: row.grid_export_daily || 0,
-          total: row.grid_export_total || 0
-        },
-        dailyUnit: 'kWh',
-        totalUnit: 'MWh',
-        label: 'Import from grid / Export to grid'
+        power: row.grid_power || 0,
+        powerUnit: 'kW',
+        powerLabel: 'Grid power'
       },
       gen: {
-        daily: row.gen_daily || 0,
-        total: row.gen_total || 0,
-        dailyUnit: 'kWh',
-        totalUnit: 'MWh',
-        label: 'GEN Energy'
+        power: row.gen_power || 0,
+        powerUnit: 'kW',
+        powerLabel: 'GEN power'
       }
     })).reverse(); // Reverse to show oldest first
   } catch (error) {
@@ -604,7 +429,6 @@ module.exports = {
   pool,
   initDatabase,
   saveRawDataToDatabase,
-  saveToDatabase,
   saveCardData,
   saveChartData,
   getLatestData,

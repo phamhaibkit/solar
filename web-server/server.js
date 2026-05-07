@@ -71,68 +71,6 @@ function broadcastData(data) {
   });
 }
 
-// API endpoint to receive raw data from proxy
-app.post('/api/raw-data', async (req, res) => {
-  try {
-    const { source, data, timestamp } = req.body;
-    console.log('📊 Received raw data:', new Date().toISOString(), '[Source:', source, ']');
-    
-    // Save raw data to database first
-    await saveRawDataToDatabase(source || 'UNKNOWN', data);
-    
-    // Try to parse - only save to atess_data if parsing succeeds (contains 0x24)
-    try {
-      const parsedData = parsePacket(data);
-      const meaningfulData = extractMeaningfulFields(parsedData);
-      
-      // Update latest data
-      latestData = {
-        ...meaningfulData,
-        timestamp: timestamp || new Date().toISOString()
-      };
-      
-      // Save parsed data to database
-      await saveToDatabase(meaningfulData);
-      
-      // Broadcast to WebSocket clients
-      broadcastData(latestData);
-      
-      res.json({ success: true, message: 'Raw data received and processed' });
-    } catch (parseError) {
-      console.log('⚠️  Invalid packet (no 0x24), skipping parse and save to atess_data');
-      res.json({ success: true, message: 'Raw data saved (invalid packet, skipped parse)' });
-    }
-  } catch (error) {
-    console.error('❌ Error processing raw data:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// API endpoint to receive data from proxy (legacy)
-app.post('/api/data', async (req, res) => {
-  try {
-    const data = req.body;
-    console.log('📊 Received data:', new Date().toISOString());
-    
-    // Update latest data
-    latestData = {
-      ...data,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Save to database
-    await saveToDatabase(data);
-    
-    // Broadcast to WebSocket clients
-    broadcastData(latestData);
-    
-    res.json({ success: true, message: 'Data received and processed' });
-  } catch (error) {
-    console.error('❌ Error processing data:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 // API endpoint to get card data (latest data)
 app.get('/api/cards', async (req, res) => {
   try {
@@ -282,7 +220,7 @@ const tcpServer = net.createServer(socket => {
 
         console.log(`✅ ${source} data processed and saved to CARD and CHART tables`);
       } catch (parseError) {
-        console.log('⚠️  Invalid packet (no 0x24), skipping parse and save to atess_data');
+        console.log('⚠️  Invalid packet (no 0x24), skipping parse and save to CARD/CHART tables');
       }
     } catch (error) {
       console.error(`❌ Error processing ${source} TCP data:`, error.message);
