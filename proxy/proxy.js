@@ -16,107 +16,33 @@ const RESTART_DELAY = 2000; // 2 seconds
 let proxyServer = null;
 let restartAttempts = 0;
 let targetConnectionStatus = 'disconnected';
-let secondServerConnectionPool = [];
-const MAX_POOL_SIZE = 5;
 
 // ===== SEND RAW DATA TO SECOND WEB SERVER =====
 function sendRawDataToSecondWebServer(data, source) {
-  // Try to get a connection from pool or create new one
-  let secondServerSocket = secondServerConnectionPool.find(socket => !socket.destroyed && socket.readyState === 'open');
-  
-  if (!secondServerSocket) {
-    secondServerSocket = net.connect(SECOND_WEB_SERVER_PORT, SECOND_WEB_SERVER_HOST);
-    
-    // Add to pool if not full
-    if (secondServerConnectionPool.length < MAX_POOL_SIZE) {
-      secondServerConnectionPool.push(secondServerSocket);
-    }
-    
-    // Set up connection handlers
-    setupSecondServerSocket(secondServerSocket);
-  }
+  const secondServerSocket = net.connect(SECOND_WEB_SERVER_PORT, SECOND_WEB_SERVER_HOST);
 
-  // Send data with retry logic
-  sendDataWithRetry(secondServerSocket, data, source);
-}
-
-function setupSecondServerSocket(socket) {
-  socket.setTimeout(15000); // 15 second timeout
-  
-  socket.on('error', (err) => {
-    if (err.code !== 'ECONNRESET') {
-      console.error(`❌ Second web server connection error: ${err.message}`);
-    }
-    // Remove from pool
-    const index = secondServerConnectionPool.indexOf(socket);
-    if (index > -1) {
-      secondServerConnectionPool.splice(index, 1);
-    }
-  });
-
-  socket.on('close', () => {
-    // Remove from pool
-    const index = secondServerConnectionPool.indexOf(socket);
-    if (index > -1) {
-      secondServerConnectionPool.splice(index, 1);
-    }
-  });
-
-  socket.on('timeout', () => {
-    console.warn('⚠️ Second web server connection timeout');
-    socket.destroy();
-  });
-}
-
-function sendDataWithRetry(socket, data, source, retryCount = 0) {
-  if (socket.destroyed || socket.readyState !== 'open') {
-    if (retryCount < 2) {
-      // Try with new connection
-      setTimeout(() => {
-        sendRawDataToSecondWebServer(data, source);
-      }, 1000 * (retryCount + 1));
-    } else {
-      console.error(`❌ Failed to send to second web server after ${retryCount + 1} attempts [Source: ${source}]`);
-    }
-    return;
-  }
-
-  try {
+  secondServerSocket.on('connect', () => {
     // Map source names to prefix
     const sourcePrefix = source === 'COLLECTOR' ? 'COLLECTOR' : 'WEBSERVER';
     const prefix = sourcePrefix + ':';
 
     // Concatenate prefix and data into single buffer to ensure they arrive together
     const prefixedData = Buffer.concat([Buffer.from(prefix), data]);
-    
-    // Write data
-    const success = socket.write(prefixedData, (err) => {
-      if (err) {
-        console.error(`❌ Write error to second web server [Source: ${source}]: ${err.message}`);
-        if (retryCount < 2) {
-          setTimeout(() => {
-            sendRawDataToSecondWebServer(data, source);
-          }, 1000 * (retryCount + 1));
-        }
-      } else {
-        console.log(`✅ Raw data sent to second web server ${SECOND_WEB_SERVER_HOST}:${SECOND_WEB_SERVER_PORT} [Source: ${source}]`);
-      }
-    });
+    secondServerSocket.write(prefixedData);
+    console.log(`✅ Raw data sent to second web server ${SECOND_WEB_SERVER_HOST}:${SECOND_WEB_SERVER_PORT} [Source: ${source}]`);
+    secondServerSocket.end();
+  });
 
-    if (!success) {
-      // Buffer full, retry after delay
-      setTimeout(() => {
-        sendDataWithRetry(socket, data, source, retryCount + 1);
-      }, 100);
-    }
-  } catch (err) {
-    console.error(`❌ Error preparing data for second web server [Source: ${source}]: ${err.message}`);
-    if (retryCount < 2) {
-      setTimeout(() => {
-        sendRawDataToSecondWebServer(data, source);
-      }, 1000 * (retryCount + 1));
-    }
-  }
+  secondServerSocket.on('error', (err) => {
+    console.error(`❌ Error sending to second web server [Source: ${source}]: ${err.message}`);
+  });
+
+  secondServerSocket.on('timeout', () => {
+    console.warn(`⚠️ Timeout sending to second web server [Source: ${source}]`);
+    secondServerSocket.destroy();
+  });
+
+  secondServerSocket.setTimeout(5000); // 5 second timeout
 }
 
 // ===== HEALTH CHECK =====
