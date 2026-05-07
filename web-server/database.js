@@ -21,7 +21,7 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
   // Disable pg_stat_statements to fix Railway error
   statement_timeout: '30s',
-  options: '-c statement_timeout=30s -c track_activity_query_size=0'
+  options: '-c statement_timeout=30s'
 });
 
 // Initialize PostgreSQL tables
