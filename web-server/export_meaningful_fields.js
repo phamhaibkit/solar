@@ -20,9 +20,9 @@ const OFFICIAL_REGISTER_MAP = {
     // CHART values (kW - realtime power)
     pvPower: { address: 51, name: 'PV power', unit: 'kW', scale: 0.1 },
     pvTotalPower: { address: 108, name: 'PV power', unit: 'kW', scale: 0.1 },
-    loadTotalPower: { address: 49, name: 'Load active power', unit: 'kW', scale: 0.1 },
+    loadPower: { address: 49, name: 'Load active power', unit: 'kW', scale: 0.1 },
     batteryPower: { address: 17, name: 'Battery power', unit: 'kW', scale: 0.1, signed: true },
-    bypassActivePower: { address: 19, name: 'Grid power (bypass)', unit: 'kW', scale: 0.1, signed: true },
+    bypassActivePower: { address: 249, name: 'Grid power (bypass)', unit: 'kW', scale: 0.1, signed: true },
     dgActivePower: { address: 220, name: 'DG power', unit: 'kW', scale: 0.1 },
     soc: { address: 47, name: 'Battery SOC', unit: '%', scale: 1 }
 };
@@ -35,12 +35,6 @@ function applyScale(value, scale = 1, offset = 0, signed = false) {
     return result;
 }
 
-// Helper function to calculate High/Low bit value
-function calculateHighLow(low, high, scale = 1) {
-    const total = (low * 65536) + high;
-    return total * scale;
-}
-
 // Main function to extract meaningful fields from parsed data
 function extractMeaningfulFields(parsedData) {
     const registerMap = parsedData.registerMap;
@@ -49,9 +43,8 @@ function extractMeaningfulFields(parsedData) {
     const timestamp = `${timestampObj.year}-${String(timestampObj.month).padStart(2, '0')}-${String(timestampObj.day).padStart(2, '0')}T${String(timestampObj.hour).padStart(2, '0')}:${String(timestampObj.minute).padStart(2, '0')}:${String(timestampObj.second).padStart(2, '0')}`;
     
     // Extract real-time power values (CHART data)
-    const pvPower = registerMap[OFFICIAL_REGISTER_MAP.pvTotalPower.address] || 
-                   registerMap[OFFICIAL_REGISTER_MAP.pvPower.address] || 0;
-    const loadPower = registerMap[OFFICIAL_REGISTER_MAP.loadTotalPower.address] || 0;
+    const pvPower = registerMap[OFFICIAL_REGISTER_MAP.pvPower.address] || 0;
+    const loadPower = registerMap[OFFICIAL_REGISTER_MAP.loadPower.address] || 0;
     const batteryPower = registerMap[OFFICIAL_REGISTER_MAP.batteryPower.address] || 0;
     const bypassPower = registerMap[OFFICIAL_REGISTER_MAP.bypassActivePower.address] || 0;
     const genPower = registerMap[OFFICIAL_REGISTER_MAP.dgActivePower.address] || 0;
