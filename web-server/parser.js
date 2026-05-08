@@ -26,7 +26,17 @@ function parsePacket(hex, debug = false) {
     throw new Error("Invalid packet header (not 0x24)");
   }
 
-  const decoded = xorDecode(body.slice(1));
+  // Remove CRC16 checksum (last 2 bytes) BEFORE XOR decryption
+  // CRC is calculated AFTER encryption, so CRC is NOT encrypted
+  const bodyWithoutCRC = body.slice(1, body.length - 2);
+  const crc16 = body.slice(body.length - 2);
+
+  // XOR decode only the data area (CRC is not encrypted)
+  const decoded = xorDecode(bodyWithoutCRC);
+
+  if (debug) {
+    console.log('🔍 CRC16 checksum (bytes):', crc16.toString('hex'));
+  }
 
   let offset = 0;
 
