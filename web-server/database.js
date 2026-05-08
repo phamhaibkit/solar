@@ -94,22 +94,14 @@ async function initDatabase() {
         timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         logger_sn TEXT,
         device_sn TEXT,
-        pv_power REAL,
-        pv_unit TEXT DEFAULT 'kW',
-        pv_label TEXT DEFAULT 'PV power',
-        load_power REAL,
-        load_unit TEXT DEFAULT 'kW',
-        load_label TEXT DEFAULT 'Load power',
-        battery_power REAL,
-        battery_soc REAL,
-        battery_unit TEXT DEFAULT 'kW',
-        battery_label TEXT DEFAULT 'Battery power',
-        grid_power REAL,
-        grid_unit TEXT DEFAULT 'kW',
-        grid_label TEXT DEFAULT 'Grid power',
-        gen_power REAL,
-        gen_unit TEXT DEFAULT 'kW',
-        gen_label TEXT DEFAULT 'GEN power'
+        pv REAL,
+        load REAL,
+        battery_charge REAL,
+        battery_discharge REAL,
+        grid_import REAL,
+        grid_export REAL,
+        gen REAL,
+        soc REAL
       );
     `);
     console.log('✅ chart_data table created');
@@ -163,7 +155,7 @@ async function saveCardData(meaningfulData) {
       meaningfulData.grid?.label || 'Import from grid / Export to grid',
       meaningfulData.gen?.daily || 0,
       meaningfulData.gen?.dailyUnit || 'kWh',
-      meaningfulData.gen?.label || 'Energy of import from GEN'
+      meaningfulData.gen?.label || 'GEN Energy'
     ];
 
     await pool.query(query, values);
@@ -184,34 +176,23 @@ async function saveChartData(meaningfulData) {
     const query = `
       INSERT INTO chart_data (
         timestamp, logger_sn, device_sn,
-        pv_power, pv_unit, pv_label,
-        load_power, load_unit, load_label,
-        battery_power, battery_soc, battery_unit, battery_label,
-        grid_power, grid_unit, grid_label,
-        gen_power, gen_unit, gen_label
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        pv, load, battery_charge, battery_discharge,
+        grid_import, grid_export, gen, soc
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     `;
 
     const values = [
       meaningfulData.timestamp || new Date(),
       meaningfulData.device?.loggerSN || null,
       meaningfulData.device?.deviceSN || null,
-      meaningfulData.pv?.power || 0,
-      meaningfulData.pv?.powerUnit || 'kW',
-      meaningfulData.pv?.powerLabel || 'PV power',
-      meaningfulData.load?.power || 0,
-      meaningfulData.load?.powerUnit || 'kW',
-      meaningfulData.load?.powerLabel || 'Load power',
-      meaningfulData.battery?.power || 0,
-      meaningfulData.battery?.soc || 0,
-      meaningfulData.battery?.powerUnit || 'kW',
-      meaningfulData.battery?.powerLabel || 'Battery power',
-      meaningfulData.grid?.power || 0,
-      meaningfulData.grid?.powerUnit || 'kW',
-      meaningfulData.grid?.powerLabel || 'Grid power',
-      meaningfulData.gen?.power || 0,
-      meaningfulData.gen?.powerUnit || 'kW',
-      meaningfulData.gen?.powerLabel || 'GEN power'
+      meaningfulData.realtime?.pv || 0,
+      meaningfulData.realtime?.load || 0,
+      meaningfulData.realtime?.batteryCharge || 0,
+      meaningfulData.realtime?.batteryDischarge || 0,
+      meaningfulData.realtime?.gridImport || 0,
+      meaningfulData.realtime?.gridExport || 0,
+      meaningfulData.realtime?.gen || 0,
+      meaningfulData.realtime?.soc || 0
     ];
 
     await pool.query(query, values);
@@ -403,28 +384,30 @@ async function getChartData(startDate = null, endDate = null) {
         deviceSN: row.device_sn
       },
       pv: {
-        power: row.pv_power || 0,
+        power: row.pv || 0,
         powerUnit: 'kW',
         powerLabel: 'PV power'
       },
       load: {
-        power: row.load_power || 0,
+        power: row.load || 0,
         powerUnit: 'kW',
         powerLabel: 'Load power'
       },
       battery: {
-        power: row.battery_power || 0,
-        soc: row.battery_soc || 0,
+        charge: row.battery_charge || 0,
+        discharge: row.battery_discharge || 0,
+        soc: row.soc || 0,
         powerUnit: 'kW',
         powerLabel: 'Battery power'
       },
       grid: {
-        power: row.grid_power || 0,
+        import: row.grid_import || 0,
+        export: row.grid_export || 0,
         powerUnit: 'kW',
         powerLabel: 'Grid power'
       },
       gen: {
-        power: row.gen_power || 0,
+        power: row.gen || 0,
         powerUnit: 'kW',
         powerLabel: 'GEN power'
       }
