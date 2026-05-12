@@ -176,31 +176,13 @@ async function startServer() {
 const tcpServer = net.createServer(socket => {
   socket.on('data', async (data) => {
     let source = 'UNKNOWN';
-    let hexData = data;
-
-    // Parse source prefix from buffer
-    const collectorPrefix = Buffer.from('COLLECTOR:');
-    const webserverPrefix = Buffer.from('WEBSERVER:');
-
-    if (data.length >= collectorPrefix.length && data.subarray(0, collectorPrefix.length).equals(collectorPrefix)) {
-      source = 'COLLECTOR';
-      hexData = data.subarray(collectorPrefix.length); // Remove "COLLECTOR:" from buffer
-      console.log('🔍 Source: COLLECTOR, prefix removed');
-    } else if (data.length >= webserverPrefix.length && data.subarray(0, webserverPrefix.length).equals(webserverPrefix)) {
-      source = 'WEB_SERVER';
-      hexData = data.subarray(webserverPrefix.length); // Remove "WEBSERVER:" from buffer
-      console.log('🔍 Source: WEB_SERVER, prefix removed');
-    } else {
-      console.log('🔍 No prefix detected, source: UNKNOWN');
-      console.log('🔍 Data buffer starts with:', data.subarray(0, 10).toString('hex'));
-    }
-
+    
     console.log(`📊 Received TCP data from ${source} on port ${TCP_DATA_PORT}`);
     console.log(`📝 Data buffer: ${data.subarray(0, 25).toString('hex')}...`);
 
     try {
       // Convert binary data directly to hex string (no UTF-8 encoding)
-      const hexDataString = hexData.toString('hex');
+      const hexDataString = data.toString('hex');
 
       // Save raw data to database first
       await saveRawDataToDatabase(source, hexDataString);

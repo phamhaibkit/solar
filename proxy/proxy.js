@@ -2,10 +2,10 @@ const net = require('net');
 
 // ===== CONFIG =====
 const PROXY_PORT = 1500;
-// const TARGET_HOST = 'www.enerclo-atesspower.com';
-// const TARGET_PORT = 5279;
-const TARGET_HOST = '127.0.0.1';
-const TARGET_PORT = 1600;
+const TARGET_HOST = 'www.enerclo-atesspower.com';
+const TARGET_PORT = 5279;
+// const TARGET_HOST = '127.0.0.1';
+// const TARGET_PORT = 1600;
 const SECOND_WEB_SERVER_HOST = 'shortline.proxy.rlwy.net';
 const SECOND_WEB_SERVER_PORT = 50124; // Railway TCP proxy port
 const HEALTH_CHECK_INTERVAL = 5000; // 5 seconds
@@ -188,25 +188,3 @@ startProxy();
 
 setInterval(checkTargetConnection, HEALTH_CHECK_INTERVAL);
 
-// Handle process termination gracefully
-process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down proxy gracefully...');
-  if (proxyServer) {
-    proxyServer.close(() => {
-      console.log('✅ Proxy server closed');
-      process.exit(0);
-    });
-  } else {
-    process.exit(0);
-  }
-});
-
-process.on('SIGTERM', () => {
-  console.log('\n🛑 Received SIGTERM, shutting down...');
-  if (proxyServer) {
-    proxyServer.close(() => {
-      console.log('✅ Proxy server closed');
-      process.exit(0);
-    });
-  }
-});
