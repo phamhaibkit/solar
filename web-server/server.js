@@ -175,7 +175,7 @@ async function startServer() {
 // Single TCP Server for both Collector and Web Server Data (port 3002)
 const tcpServer = net.createServer(socket => {
   socket.on('data', async (data) => {
-    let source = 'UNKNOWN';
+    let source = 'COLLECTOR';
     
     console.log(`📊 Received TCP data from ${source} on port ${TCP_DATA_PORT}`);
     console.log(`📝 Data buffer: ${data.subarray(0, 25).toString('hex')}...`);
